@@ -1,1 +1,49 @@
-{"action":{"default_icon":{"128":"icons/icon.svg","16":"icons/icon.svg","32":"icons/icon.svg","48":"icons/icon.svg"},"default_popup":"popup.html","default_title":"Pointfix：クリックしてサイドパネルを開く"},"background":{"service_worker":"background.js"},"commands":{"clear-all":{"description":"指さしをすべて消す","suggested_key":{"default":"Alt+X"}},"copy-prompt":{"description":"作ったプロンプトをコピーする","suggested_key":{"default":"Alt+C"}},"open-panel":{"description":"サイドパネルを開く","suggested_key":{"default":"Alt+L"}},"toggle-inspect":{"description":"指さしモードを開始／停止する","suggested_key":{"default":"Alt+O"}}},"content_scripts":[{"css":["content.css"],"js":["prompt.js","content.js"],"matches":["http://*/*","https://*/*"],"run_at":"document_idle"}],"description":"サイトの「ここをこうしてほしい」をクリックで指定して、AIエージェントにそのまま投げられる修正プロンプトを作る拡張機能。","host_permissions":["http://*/*","https://*/*"],"icons":{"128":"icons/icon.svg","16":"icons/icon.svg","32":"icons/icon.svg","48":"icons/icon.svg"},"manifest_version":3,"name":"Pointfix","permissions":["storage","sidePanel","activeTab"],"short_name":"Pointfix","side_panel":{"default_path":"sidepanel.html"},"version":"0.1.0"}
+{
+  "manifest_version": 3,
+  "name": "Pointfix",
+  "short_name": "Pointfix",
+  "version": "0.2.0",
+  "description": "Point at any part of a web page and copy a ready-to-paste prompt for your AI agent.",
+  "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+  "action": {
+    "default_title": "Pointfix: start or stop Point mode",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "32": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "commands": {
+    "toggle-point": {
+      "suggested_key": { "default": "Alt+S" },
+      "description": "Start or stop Point mode"
+    },
+    "copy-prompt": {
+      "suggested_key": { "default": "Alt+C" },
+      "description": "Copy the prompt"
+    },
+    "delete-all": {
+      "suggested_key": { "default": "Alt+D" },
+      "description": "Delete all points on this page"
+    }
+  }
+}

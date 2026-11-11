@@ -1,7 +1,7 @@
 /* Pointfix - in-page UI (all classes are yb- prefixed) */
 
-/* Hide the native cursor while inspecting; our own arrow follows the mouse. */
-html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
+/* Hide the native cursor in Point mode; our own arrow follows the mouse. */
+html.yb-point:not(.yb-editing), html.yb-point:not(.yb-editing) * {
   cursor: none !important;
 }
 
@@ -37,7 +37,7 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   text-overflow: ellipsis;
   background: #4f46e5;
   color: #fff;
-  font: 12px/1.4 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
   padding: 4px 8px;
   border-radius: 6px;
 }
@@ -84,7 +84,8 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   to   { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
 }
 
-.yb-pins {
+/* Saved points: a dashed box around the element, with its number. */
+.yb-boxes {
   position: absolute;
   left: 0;
   top: 0;
@@ -94,30 +95,102 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   pointer-events: none;
 }
 
-.yb-pin {
+.yb-box {
   position: absolute;
-  transform: translate(-40%, -40%);
-  width: 26px;
-  height: 26px;
+  box-sizing: border-box;
+  border: 2px dashed #6366f1;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.06);
+  pointer-events: none;
+}
+
+.yb-box-num {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #f59e0b;
   border: 2px solid #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   color: #1f2937;
-  font: bold 14px/22px -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  font: bold 13px/20px -apple-system, "Segoe UI", sans-serif;
   text-align: center;
-  pointer-events: none;
 }
 
-/* New pins pop in with a small overshoot. */
-.yb-pin-in {
+/* New boxes pop in with a small overshoot. */
+.yb-box-in {
   animation: yb-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes yb-pop {
-  0%   { transform: translate(-40%, -40%) scale(0); }
-  60%  { transform: translate(-40%, -40%) scale(1.25); }
-  100% { transform: translate(-40%, -40%) scale(1); }
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Bottom-right bar with Start, Copy and Delete. */
+.yb-bar {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483003;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
+  color: #f9fafb;
+}
+
+.yb-bar-count {
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.yb-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
+  cursor: pointer;
+  transition: transform 0.12s ease-out, background 0.15s ease-out, filter 0.15s ease-out;
+}
+
+.yb-bar-btn:hover { filter: brightness(1.15); }
+.yb-bar-btn:active { transform: scale(0.96); }
+.yb-bar-btn:disabled { opacity: 0.4; cursor: default; filter: none; }
+
+.yb-bar-primary {
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 700;
+}
+
+.yb-bar-on {
+  background: #dc2626 !important;
+  border-color: #f87171 !important;
+}
+
+.yb-kbd {
+  font: 11px/1 -apple-system, "Segoe UI", sans-serif;
+  opacity: 0.7;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  padding: 2px 4px;
 }
 
 .yb-editor {
@@ -131,7 +204,7 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   border-radius: 14px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   padding: 14px;
-  font: 13px/1.5 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  font: 13px/1.5 -apple-system, "Segoe UI", sans-serif;
 }
 
 .yb-editor-in {
@@ -156,33 +229,6 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   word-break: break-all;
 }
 
-.yb-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.yb-chip {
-  background: #1f2937;
-  color: #e5e7eb;
-  border: 1px solid #4b5563;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out, transform 0.12s ease-out;
-}
-
-.yb-chip:hover { border-color: #818cf8; }
-.yb-chip:active { transform: scale(0.94); }
-
-.yb-chip-on {
-  background: #4f46e5 !important;
-  border-color: #818cf8 !important;
-  color: #fff !important;
-}
-
 .yb-editor-input {
   width: 100%;
   box-sizing: border-box;
@@ -203,22 +249,6 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
 }
 
 .yb-spacer { flex: 1; }
-
-.yb-mic {
-  background: none;
-  border: 1px solid #4b5563;
-  color: #e5e7eb;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.yb-mic-on {
-  background: #dc2626 !important;
-  border-color: #f87171 !important;
-  color: #fff !important;
-}
 
 .yb-btn {
   border-radius: 8px;
@@ -249,13 +279,13 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
-  z-index: 2147483003;
+  z-index: 2147483004;
   background: #111827;
   color: #fff;
   border: 1px solid #4f46e5;
   border-radius: 999px;
   padding: 9px 18px;
-  font: 13px/1.4 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   animation: yb-toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
@@ -268,8 +298,8 @@ html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
 
 /* Respect the OS setting for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
-  .yb-overlay, .yb-cursor, .yb-cursor svg, .yb-ripple, .yb-pin-in,
-  .yb-editor-in, .yb-toast, .yb-chip, .yb-btn {
+  .yb-overlay, .yb-cursor, .yb-cursor svg, .yb-ripple, .yb-box-in,
+  .yb-editor-in, .yb-toast, .yb-bar-btn, .yb-btn {
     animation: none !important;
     transition: none !important;
   }

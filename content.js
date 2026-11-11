@@ -1,8 +1,7 @@
 // Pointfix - content script
-// "指さしモード" (inspect mode): hover to highlight, click an element,
-// add a short instruction, and a numbered pin stays on the page.
-// Annotations are kept in chrome.storage.local and turned into an
-// AI-ready prompt by the side panel / popup.
+// Point mode: hover to highlight, click an element, type what should change.
+// Each point gets a dashed box with a number. Points are saved in
+// chrome.storage.local and can be copied as a short English prompt for AI agents.
 
 (function () {
   "use strict";
@@ -10,32 +9,19 @@
   window.__ybLoaded = true;
 
   const STORAGE_KEY = "yb_annotations";
-  const OVERALL_KEY = "yb_overall";
 
-  const CHIPS = [
-    "大きくして", "小さくして", "色を変えて", "目立たせて",
-    "余白を広げて", "上に移動して", "文言を変えて", "消して"
-  ];
-
-  const TAG_JA = {
-    BUTTON: "ボタン", A: "リンク", INPUT: "入力欄", TEXTAREA: "テキスト入力欄",
-    SELECT: "セレクトボックス", IMG: "画像", H1: "見出し", H2: "見出し",
-    H3: "見出し", H4: "見出し", H5: "見出し", H6: "見出し",
-    HEADER: "ヘッダー", NAV: "ナビゲーション", FOOTER: "フッター",
-    FORM: "フォーム", P: "段落テキスト", LI: "リスト項目",
-    TD: "表のセル", TH: "表の見出しセル", LABEL: "ラベル",
-    SECTION: "セクション", ARTICLE: "記事ブロック", MAIN: "メイン部分",
-    DIV: "ブロック", SPAN: "テキスト", UL: "リスト", OL: "リスト",
-    TABLE: "表", VIDEO: "動画", SVG: "アイコン"
+  const KIND = {
+    BUTTON: "button", A: "link", INPUT: "input", TEXTAREA: "text area",
+    SELECT: "select", IMG: "image", H1: "heading", H2: "heading", H3: "heading",
+    H4: "heading", H5: "heading", H6: "heading", HEADER: "header", NAV: "nav",
+    FOOTER: "footer", FORM: "form", P: "paragraph", LI: "list item", TD: "table cell",
+    TH: "table header", LABEL: "label", SECTION: "section", ARTICLE: "article",
+    MAIN: "main", DIV: "block", SPAN: "text", UL: "list", OL: "list", TABLE: "table",
+    VIDEO: "video", SVG: "icon"
   };
 
-  const state = {
-    inspecting: false,
-    editing: false,
-    hoverEl: null,
-    pending: null,
-    recognition: null
-  };
+  const state = { point: false, editing: false };
+  let pageCount = 0;
 
   function pageKey() {
     return location.origin + location.pathname + location.search;
@@ -45,34 +31,26 @@
     return !!(el && el.closest && el.closest("[data-yb-ui]"));
   }
 
+  function makeEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text != null) el.textContent = text;
+    el.setAttribute("data-yb-ui", "1");
+    return el;
+  }
+
   // ---------- element description ----------
 
-  function visibleText(el) {
+  function shortText(el) {
     const t = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
-    return t.length > 40 ? t.slice(0, 40) + "…" : t;
+    return t.length > 60 ? t.slice(0, 60) + "..." : t;
   }
 
-  function regionOf(rect) {
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const v = cy < vh / 3 ? "上部" : cy > (vh * 2) / 3 ? "下部" : "中央";
-    const h = cx < vw / 3 ? "左側" : cx > (vw * 2) / 3 ? "右側" : "中央";
-    if (v === "中央" && h === "中央") return "画面中央";
-    if (h === "中央") return "画面" + v;
-    return "画面" + v + "の" + h;
-  }
-
-  function describe(el) {
-    const rect = el.getBoundingClientRect();
-    const kind = TAG_JA[el.tagName] || "要素";
-    const text = visibleText(el);
-    const region = regionOf(rect);
-    let d = region + "にある";
-    if (text) d += "「" + text + "」という" ;
-    else if (el.tagName === "IMG" && el.getAttribute("alt")) d += "「" + el.getAttribute("alt") + "」という";
-    d += kind;
-    return { description: d, text };
+  function labelFor(el) {
+    const r = el.getBoundingClientRect();
+    const kind = KIND[el.tagName] || "element";
+    const text = shortText(el);
+    return kind + (text ? ' "' + text + '"' : "") + " · " + Math.round(r.width) + "×" + Math.round(r.height);
   }
 
   // ---------- selector generation ----------
@@ -120,45 +98,64 @@
 
   function captureInfo(el) {
     const rect = el.getBoundingClientRect();
-    const { description, text } = describe(el);
-    let html = "";
-    try {
-      html = (el.outerHTML || "").replace(/\s+/g, " ").trim();
-      if (html.length > 600) html = html.slice(0, 600) + " <!-- … -->";
-    } catch (e) { /* ignore */ }
     return {
       id: "yb" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      url: location.href,
       pageKey: pageKey(),
-      pageTitle: document.title || "",
+      url: location.href,
       selector: buildSelector(el),
-      tag: el.tagName.toLowerCase(),
-      text,
-      description,
-      html,
+      tagName: el.tagName,
+      innerText: shortText(el),
+      instruction: "",
       docX: Math.round(rect.left + window.scrollX),
       docY: Math.round(rect.top + window.scrollY),
       width: Math.round(rect.width),
-      height: Math.round(rect.height),
-      instruction: ""
+      height: Math.round(rect.height)
     };
   }
 
-  // ---------- UI elements ----------
+  // ---------- prompt ----------
 
-  function makeEl(tag, className, text) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (text != null) el.textContent = text;
-    el.setAttribute("data-yb-ui", "1");
-    return el;
+  function buildPrompt(list) {
+    const lines = [];
+    lines.push("Please update the web page below as described. Change only the annotated elements.");
+    lines.push("");
+    lines.push("# Webpage Context");
+    lines.push("URL: " + list[0].url);
+    lines.push("");
+    lines.push("# Annotations");
+    lines.push("");
+    list.forEach((a, i) => {
+      lines.push("## Annotation " + (i + 1));
+      lines.push("**Target**: `" + a.selector + "`");
+      lines.push("**TagName**: " + a.tagName);
+      if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
+      lines.push("**Instruction**: " + a.instruction);
+      lines.push("");
+    });
+    lines.push("After the changes, briefly tell me what you changed.");
+    return lines.join("\n");
   }
+
+  function fallbackCopy(text) {
+    const ta = makeEl("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.documentElement.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  // ---------- UI elements ----------
 
   const overlay = makeEl("div", "yb-overlay");
   const overlayLabel = makeEl("div", "yb-overlay-label");
   overlay.appendChild(overlayLabel);
 
-  // The arrow that follows the mouse while inspecting.
+  // Arrow that follows the mouse in Point mode.
   const cursorEl = makeEl("div", "yb-cursor");
   cursorEl.innerHTML =
     '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">' +
@@ -181,7 +178,7 @@
     overlay.classList.remove("yb-on");
   }
 
-  const pinsLayer = makeEl("div", "yb-pins");
+  const boxLayer = makeEl("div", "yb-boxes");
 
   const toast = makeEl("div", "yb-toast");
   toast.style.display = "none";
@@ -202,118 +199,96 @@
     document.documentElement.appendChild(r);
   }
 
+  function barButton(label, hint, extra) {
+    const b = makeEl("button", "yb-bar-btn" + (extra ? " " + extra : ""));
+    b.type = "button";
+    b.append(makeEl("span", "", label), makeEl("kbd", "yb-kbd", hint));
+    return b;
+  }
+
+  // Small bar at the bottom right with the three actions.
+  const bar = makeEl("div", "yb-bar");
+  const countEl = makeEl("span", "yb-bar-count", "No points");
+  const pointBtn = barButton("Start", "Alt+S", "yb-bar-primary");
+  const copyBtn = barButton("Copy prompt", "Alt+C");
+  const deleteBtn = barButton("Delete all", "Alt+D");
+  bar.append(countEl, pointBtn, copyBtn, deleteBtn);
+  pointBtn.addEventListener("click", () => setPoint(!state.point));
+  copyBtn.addEventListener("click", copyPrompt);
+  deleteBtn.addEventListener("click", deleteAll);
+
+  function updateBar() {
+    countEl.textContent = pageCount
+      ? pageCount + (pageCount === 1 ? " point" : " points")
+      : "No points";
+    copyBtn.disabled = pageCount === 0;
+    deleteBtn.disabled = pageCount === 0;
+    pointBtn.firstChild.textContent = state.point ? "Stop" : "Start";
+    pointBtn.classList.toggle("yb-bar-on", state.point);
+  }
+
   function ensureMounted() {
     if (!overlay.isConnected) document.documentElement.appendChild(overlay);
     if (!cursorEl.isConnected) document.documentElement.appendChild(cursorEl);
-    if (!pinsLayer.isConnected) document.documentElement.appendChild(pinsLayer);
+    if (!boxLayer.isConnected) document.documentElement.appendChild(boxLayer);
     if (!toast.isConnected) document.documentElement.appendChild(toast);
+    if (!bar.isConnected) document.documentElement.appendChild(bar);
   }
 
   // ---------- editor ----------
 
   let editor = null;
-  let editorChips = null;
-  let editorInput = null;
 
   function closeEditor() {
     if (editor) { editor.remove(); editor = null; }
     state.editing = false;
-    state.pending = null;
-    stopVoice();
-    // Back to the arrow cursor while inspecting; native cursor inside the editor.
     document.documentElement.classList.remove("yb-editing");
-    cursorEl.classList.toggle("yb-on", state.inspecting);
+    cursorEl.classList.toggle("yb-on", state.point);
   }
 
-  function openEditor(info, anchorRect) {
+  function openEditor(info, label, anchorRect) {
     closeEditor();
     state.editing = true;
-    state.pending = info;
     document.documentElement.classList.add("yb-editing");
     cursorEl.classList.remove("yb-on");
 
     editor = makeEl("div", "yb-editor yb-editor-in");
-    const title = makeEl("div", "yb-editor-title", "ここをどうしてほしい？");
-    const target = makeEl("div", "yb-editor-target", info.description);
-    editorChips = makeEl("div", "yb-chips");
-    const selected = new Set();
-    CHIPS.forEach((chip) => {
-      const b = makeEl("button", "yb-chip", chip);
-      b.type = "button";
-      b.addEventListener("click", () => {
-        if (selected.has(chip)) { selected.delete(chip); b.classList.remove("yb-chip-on"); }
-        else { selected.add(chip); b.classList.add("yb-chip-on"); }
-      });
-      editorChips.appendChild(b);
-    });
-
-    editorInput = makeEl("textarea", "yb-editor-input");
-    editorInput.placeholder = "例：もっと目立つ色にして、文字も太くして";
-    editorInput.rows = 2;
+    const title = makeEl("div", "yb-editor-title", "What should change?");
+    const target = makeEl("div", "yb-editor-target", label);
+    const input = makeEl("textarea", "yb-editor-input");
+    input.placeholder = "Describe the change";
+    input.rows = 2;
 
     const row = makeEl("div", "yb-editor-row");
-    const micBtn = makeEl("button", "yb-mic", "🎤 音声で入力");
-    micBtn.type = "button";
-    micBtn.addEventListener("click", () => toggleVoice(micBtn));
     const spacer = makeEl("span", "yb-spacer");
-    const cancelBtn = makeEl("button", "yb-btn yb-btn-ghost", "やめる");
+    const cancelBtn = makeEl("button", "yb-btn yb-btn-ghost", "Cancel");
     cancelBtn.type = "button";
     cancelBtn.addEventListener("click", closeEditor);
-    const addBtn = makeEl("button", "yb-btn yb-btn-primary", "＋ 追加する");
+    const addBtn = makeEl("button", "yb-btn yb-btn-primary", "Add point");
     addBtn.type = "button";
     addBtn.addEventListener("click", async () => {
-      const parts = Array.from(selected);
-      const free = editorInput.value.trim();
-      if (free) parts.push(free);
-      info.instruction = parts.join("／") || "ここを直してほしい";
-      await addAnnotation(info);
-      await renderPins();
-      const n = await countForPage();
+      const text = input.value.trim();
+      if (!text) { showToast("Type what should change"); input.focus(); return; }
+      info.instruction = text;
+      const list = await loadAll();
+      list.push(info);
+      await saveAll(list);
       closeEditor();
-      showToast("📌 " + n + "件目の指さしを追加しました");
+      showToast("Point " + list.filter((a) => a.pageKey === pageKey()).length + " added");
     });
-    row.append(micBtn, spacer, cancelBtn, addBtn);
+    row.append(spacer, cancelBtn, addBtn);
 
-    editor.append(title, target, editorChips, editorInput, row);
+    editor.append(title, target, input, row);
     document.documentElement.appendChild(editor);
 
     // Position near the element, clamped to the viewport.
-    const W = 340, H = editor.offsetHeight || 300;
-    let left = Math.min(Math.max(8, anchorRect.left), window.innerWidth - W - 8);
+    const W = 340, H = editor.offsetHeight || 200;
+    const left = Math.min(Math.max(8, anchorRect.left), window.innerWidth - W - 8);
     let top = anchorRect.bottom + 10;
     if (top + H > window.innerHeight - 8) top = Math.max(8, anchorRect.top - H - 10);
     editor.style.left = left + "px";
     editor.style.top = top + "px";
-    editorInput.focus();
-  }
-
-  // ---------- voice input ----------
-
-  function stopVoice() {
-    if (state.recognition) {
-      try { state.recognition.stop(); } catch (e) { /* ignore */ }
-      state.recognition = null;
-    }
-  }
-
-  function toggleVoice(btn) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { showToast("このブラウザでは音声入力が使えません"); return; }
-    if (state.recognition) { stopVoice(); btn.classList.remove("yb-mic-on"); return; }
-    const rec = new SR();
-    rec.lang = "ja-JP";
-    rec.interimResults = false;
-    rec.onresult = (ev) => {
-      const text = ev.results[0][0].transcript;
-      if (editorInput) {
-        editorInput.value = (editorInput.value + " " + text).trim();
-      }
-    };
-    rec.onend = () => { state.recognition = null; btn.classList.remove("yb-mic-on"); };
-    rec.onerror = () => { state.recognition = null; btn.classList.remove("yb-mic-on"); };
-    state.recognition = rec;
-    btn.classList.add("yb-mic-on");
-    try { rec.start(); } catch (e) { state.recognition = null; }
+    input.focus();
   }
 
   // ---------- storage ----------
@@ -323,31 +298,29 @@
     return Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
   }
 
-  async function addAnnotation(info) {
-    const all = await loadAll();
-    all.push(info);
-    await chrome.storage.local.set({ [STORAGE_KEY]: all });
+  async function saveAll(list) {
+    await chrome.storage.local.set({ [STORAGE_KEY]: list });
   }
 
-  async function countForPage() {
+  async function pageItems() {
     const all = await loadAll();
-    return all.filter((a) => a.pageKey === pageKey()).length;
+    return all.filter((a) => a.pageKey === pageKey());
   }
 
-  // ---------- pins ----------
+  // ---------- boxes ----------
 
-  // Pins already shown on this page; only new ones get the pop-in animation.
-  const shownPinIds = new Set();
-  const popPinIds = new Set();
-  let pinsReady = false;
+  // Boxes already shown on this page; only new ones get the pop-in animation.
+  const shownIds = new Set();
+  const popIds = new Set();
+  let ready = false;
 
-  async function renderPins() {
+  async function render() {
     ensureMounted();
-    const all = await loadAll();
-    const mine = all.filter((a) => a.pageKey === pageKey());
-    pinsLayer.textContent = "";
+    const mine = await pageItems();
+    pageCount = mine.length;
+    boxLayer.textContent = "";
     mine.forEach((a, i) => {
-      let x = a.docX, y = a.docY;
+      let x = a.docX, y = a.docY, w = a.width, h = a.height;
       if (a.selector) {
         try {
           const el = document.querySelector(a.selector);
@@ -355,70 +328,99 @@
             const r = el.getBoundingClientRect();
             x = Math.round(r.left + window.scrollX);
             y = Math.round(r.top + window.scrollY);
+            w = Math.round(r.width);
+            h = Math.round(r.height);
           }
         } catch (e) { /* keep stored position */ }
       }
-      const pin = makeEl("div", "yb-pin", String(i + 1));
-      pin.style.left = x + "px";
-      pin.style.top = y + "px";
+      const box = makeEl("div", "yb-box");
+      box.style.left = x + "px";
+      box.style.top = y + "px";
+      box.style.width = w + "px";
+      box.style.height = h + "px";
+      box.appendChild(makeEl("div", "yb-box-num", String(i + 1)));
+
       const key = a.id || "i" + i;
-      if (!shownPinIds.has(key)) {
-        shownPinIds.add(key);
-        if (pinsReady) {
+      if (!shownIds.has(key)) {
+        shownIds.add(key);
+        if (ready) {
           // Re-renders happen right after adding (storage change + direct call),
           // so keep the pop-in class for a short window to avoid losing it.
-          popPinIds.add(key);
-          setTimeout(() => popPinIds.delete(key), 800);
+          popIds.add(key);
+          setTimeout(() => popIds.delete(key), 800);
         }
       }
-      if (popPinIds.has(key)) pin.classList.add("yb-pin-in");
-      pinsLayer.appendChild(pin);
+      if (popIds.has(key)) box.classList.add("yb-box-in");
+      boxLayer.appendChild(box);
     });
-    pinsReady = true;
+    ready = true;
+    updateBar();
   }
 
-  // ---------- inspect mode ----------
+  async function copyPrompt() {
+    const mine = await pageItems();
+    if (!mine.length) { showToast("No points on this page yet"); return; }
+    const text = buildPrompt(mine);
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      ok = fallbackCopy(text);
+    }
+    showToast(ok ? "Prompt copied. Paste it into your AI agent." : "Copy failed");
+  }
 
-  function setInspect(on) {
-    state.inspecting = on;
-    document.documentElement.classList.toggle("yb-inspecting", on);
-    if (!on) {
-      hideOverlay();
-      state.hoverEl = null;
-      closeEditor();
-      cursorEl.classList.remove("yb-on");
-    } else {
+  async function deleteAll() {
+    const all = await loadAll();
+    const rest = all.filter((a) => a.pageKey !== pageKey());
+    const removed = all.length - rest.length;
+    if (!removed) { showToast("No points on this page"); return; }
+    await saveAll(rest);
+    showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
+  }
+
+  // ---------- point mode ----------
+
+  function setPoint(on) {
+    state.point = on;
+    document.documentElement.classList.toggle("yb-point", on);
+    if (on) {
       ensureMounted();
       cursorEl.classList.add("yb-on");
-      showToast("👆 直したいところをクリックしてください（Escで終了）", 2600);
+      showToast("Point mode on. Click what you want to change. Esc to stop.", 2600);
+    } else {
+      hideOverlay();
+      closeEditor();
+      cursorEl.classList.remove("yb-on");
+      showToast("Point mode off", 1600);
     }
+    updateBar();
   }
 
   document.addEventListener("mouseover", (ev) => {
-    if (!state.inspecting || state.editing) return;
+    if (!state.point || state.editing) return;
     const el = ev.target;
     if (!el || el.nodeType !== 1 || isOwnUI(el)) { hideOverlay(); return; }
-    state.hoverEl = el;
     const rect = el.getBoundingClientRect();
     // Move with transform and resize; the CSS transition eases between elements.
     overlay.style.transform = "translate(" + rect.left + "px, " + rect.top + "px)";
     overlay.style.width = rect.width + "px";
     overlay.style.height = rect.height + "px";
     overlay.classList.add("yb-on");
-    const { description } = describe(el);
-    overlayLabel.textContent = description + "（" + Math.round(rect.width) + "×" + Math.round(rect.height) + "）";
+    overlayLabel.textContent = labelFor(el);
   }, true);
 
-  // Arrow follows the mouse only while inspecting (and not while the editor is open).
+  // Arrow follows the mouse only in Point mode.
   document.addEventListener("mousemove", (ev) => {
-    if (!state.inspecting) return;
+    if (!state.point) return;
     cur.tx = ev.clientX;
     cur.ty = ev.clientY;
     if (!cur.raf) cur.raf = requestAnimationFrame(tickCursor);
   }, { capture: true, passive: true });
 
   document.addEventListener("mousedown", (ev) => {
-    if (state.inspecting && !isOwnUI(ev.target)) {
+    if (state.point && !isOwnUI(ev.target)) {
       ev.preventDefault();
       ev.stopPropagation();
       cursorEl.classList.add("yb-press");
@@ -430,7 +432,7 @@
   }, true);
 
   document.addEventListener("click", (ev) => {
-    if (!state.inspecting || state.editing) return;
+    if (!state.point || state.editing) return;
     const el = ev.target;
     if (!el || el.nodeType !== 1 || isOwnUI(el)) return;
     ev.preventDefault();
@@ -439,53 +441,35 @@
     const info = captureInfo(el);
     hideOverlay();
     ripple(ev.clientX, ev.clientY);
-    openEditor(info, rect);
+    openEditor(info, labelFor(el), rect);
   }, true);
 
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") {
       if (state.editing) closeEditor();
-      else if (state.inspecting) setInspect(false);
+      else if (state.point) setPoint(false);
     }
   }, true);
 
   let resizeTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(renderPins, 200);
+    resizeTimer = setTimeout(render, 200);
   });
 
-  // ---------- messages ----------
+  // ---------- messages from the background (toolbar icon and shortcuts) ----------
 
   chrome.runtime.onMessage.addListener((message) => {
     if (!message || typeof message.type !== "string") return;
-    if (message.type === "YB_TOGGLE_INSPECT") setInspect(!state.inspecting);
-    else if (message.type === "YB_START_INSPECT") setInspect(true);
-    else if (message.type === "YB_STOP_INSPECT") setInspect(false);
-    else if (message.type === "YB_REFRESH_PINS") renderPins();
-    else if (message.type === "YB_COPY_PROMPT") {
-      (async () => {
-        const all = await loadAll();
-        const mine = all.filter((a) => a.pageKey === pageKey());
-        const target = mine.length ? mine : all;
-        const data = await chrome.storage.local.get(OVERALL_KEY);
-        const prompt = typeof ybBuildPrompt === "function"
-          ? ybBuildPrompt(target, data[OVERALL_KEY] || "")
-          : "";
-        if (!prompt) { showToast("まだ指さしがありません"); return; }
-        try {
-          await navigator.clipboard.writeText(prompt);
-          showToast("📋 プロンプトをコピーしました。AIに貼るだけ！");
-        } catch (e) {
-          showToast("コピーできませんでした。サイドパネルからコピーしてください");
-        }
-      })();
-    }
+    if (message.type === "YB_TOGGLE_POINT") setPoint(!state.point);
+    else if (message.type === "YB_COPY_PROMPT") copyPrompt();
+    else if (message.type === "YB_DELETE_ALL") deleteAll();
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes[STORAGE_KEY]) renderPins();
+    if (area === "local" && changes[STORAGE_KEY]) render();
   });
 
-  renderPins();
+  ensureMounted();
+  render();
 })();

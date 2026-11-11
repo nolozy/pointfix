@@ -1,87 +1,85 @@
 # Pointfix
 
-**サイトの「ここをこうしてほしい」を、クリックで指定して、そのままAIエージェントに投げられるプロンプトに変えるChrome拡張機能です。**
+**Point at any part of a web page and copy a prompt that your AI agent can act on.**
 
-AIエージェントにサイトを作ってもらったあと、修正を言葉で説明するのが一番大変でした。
+Describing a small UI change in words is hard. "The blue button at the top, make it a bit bigger..." Pointfix lets you click the exact part, type what should change, and copy a short prompt with the CSS selector and the instruction. Paste it into Claude, ChatGPT, Cursor, or any AI agent.
 
-> 「あの、上のほうの、青いボタンみたいなやつを、もうちょっと大きく…」
+## How to use
 
-Pointfixなら、直したいところを**クリックして、やってほしいことを選ぶだけ**。場所・文章・セレクタ入りの指示文ができあがるので、あとはClaude / ChatGPT / CursorなどのAIに貼るだけです。
+1. **Start Point mode** — press `Alt+S`, or click the Pointfix icon.
+2. **Click the part you want to change** — type what should change and press **Add point**. A dashed box with a number stays on the page.
+3. **Copy the prompt** — press `Alt+C` (or the **Copy prompt** button), then paste it into your AI agent.
 
-## 使い方（3ステップ）
+Press `Alt+S` again or `Esc` to stop Point mode.
 
-1. **指さしをはじめる** — 拡張機能のアイコンをクリック（または `Alt+O`）
-2. **直したいところをクリック** — 「大きくして」「色を変えて」などのボタンから選ぶか、自由に書く（音声入力も可）。番号付きのピンがページに残ります
-3. **プロンプトをコピー** — サイドパネルの大きなボタンを押して、AIエージェントに貼るだけ
-
-## 生成されるプロンプトの例
+## Example prompt
 
 ```markdown
-このページのUIを修正してください。
+Please update the web page below as described. Change only the annotated elements.
 
-ページ: My Site
+# Webpage Context
 URL: https://example.com/
 
-## 修正してほしいところ
+# Annotations
 
-### 1. 画面上部にある「申込む」というボタン
-- やってほしいこと: 大きくして／もっと目立つ色にして
-- 対象の目印（CSSセレクタ）: `#cta-button`
-- 要素のテキスト: 「申込む」
+## Annotation 1
+**Target**: `button#cta`
+**TagName**: BUTTON
+**Inner Content**: Sign up
+**Instruction**: make it bigger and blue
 
-## お願い
-- 指定した要素以外は、なるべく変えないでください。
-- 修正したら、どこをどう変えたか教えてください。
+After the changes, briefly tell me what you changed.
 ```
 
-## 主な機能
+## Shortcuts
 
-- 👆 **ホバーでハイライト、クリックで指定** — 要素の説明が日本語で自動表示されます
-- 🏷 **番号ピン** — 指定した場所に番号が残るので、複数箇所まとめて指示できます
-- 🔘 **よくある指示はボタンで** — 大きく／小さく／色を変える／移動／消す など、タイピング不要
-- 🎤 **音声入力** — 話すだけで指示を書けます（対応ブラウザのみ）
-- 📋 **AI向けプロンプト自動生成** — URL・要素の説明・CSSセレクタ・HTMLを含みます
-- 🔒 **完全ローカル動作** — データを外部サーバーに送りません
-
-## 動き
-
-指さしモード中の動きは、すべてCSSの `transform` と `opacity` で作っています。外部のアニメーションライブラリは使わず、ページを重くしないようにしています。
-
-- **追従する矢印** — マウスより少し遅れて、矢印がなめらかについてきます。エディターを開いている間は、ふだんのカーソルに戻ります
-- **ホバー枠** — 要素の上を移動すると、枠が滑るように動いて大きさを合わせます
-- **クリックの波紋** — クリックした場所から、リングが広がって消えます
-- **ピンのポップイン** — 新しく付けた番号ピンが、少し弾んで現れます。ページを開き直したときの既存ピンは動きません
-- **エディターとトースト** — 出てくるときに、ふわっと浮かぶように表示されます
-
-OS の「視差効果を減らす」（`prefers-reduced-motion`）がオンのときは、これらの動きをすべて止めます。
-
-## ショートカット
-
-| 操作 | キー |
+| Action | Key |
 |---|---|
-| 指さしモード 開始／停止 | `Alt+O` |
-| サイドパネルを開く | `Alt+L` |
-| プロンプトをコピー | `Alt+C` |
-| 指さしをすべて消す | `Alt+X` |
-| 指さしモードを終わる | `Esc` |
+| Start / stop Point mode | `Alt+S` |
+| Copy the prompt | `Alt+C` |
+| Delete all points on this page | `Alt+D` |
+| Stop Point mode | `Esc` |
 
-## インストール（開発者モード）
+The bottom-right bar on each page has the same three actions as buttons. You can change shortcuts at `chrome://extensions/shortcuts`.
 
-Chrome ウェブストアには公開しません。次の手順で使ってください。
+## Features
 
-1. このリポジトリをダウンロード（または `git clone`）します
-2. Chromeで `chrome://extensions` を開きます
-3. 右上の「デベロッパーモード」をONにします
-4. 「パッケージ化されていない拡張機能を読み込む」で、このフォルダを選びます
+- **Hover to highlight, click to point** — a short label shows what you are pointing at.
+- **Dashed boxes with numbers** — every point stays visible on the page, so you can see what you asked for.
+- **One-click delete** — remove all points on the current page at once.
+- **Short prompt** — the URL, a CSS selector, the tag name, the text, and your instruction. Nothing else.
+- **Smooth motion** — an arrow cursor that follows the mouse, and a soft hover frame and click ripple. See [Motion](#motion).
+- **Runs locally** — nothing is sent to any server.
 
-## プライバシー
+## Motion
 
-この拡張機能はすべての処理をあなたのブラウザ内で行います。ページの内容や指示を外部に送信することはありません。データはブラウザのローカルストレージにのみ保存されます。
+The motion uses only CSS `transform` and `opacity`, with no animation library, to keep the page light.
 
-## 開発について
+- **Arrow cursor** — follows the mouse with a slight delay while Point mode is on.
+- **Hover frame** — slides and resizes to the element you point at.
+- **Click ripple** — a ring expands from the click point.
+- **Box pop-in** — a new dashed box appears with a small bounce.
+- **Editor and toast** — fade in when they appear.
 
-UISelector2AI の「要素を選んでAI用プロンプトにする」というアイデアに影響を受け、日本語で・非エンジニアでも感覚的に使えることを目指して、コードはゼロから独自に実装しました。
+When the OS setting "Reduce motion" is on (`prefers-reduced-motion`), all of these motions are turned off.
 
-## ライセンス
+## Install (developer mode)
+
+Pointfix is not on the Chrome Web Store. Load the folder instead.
+
+1. Download this repository (or `git clone` it).
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and choose this folder.
+
+## Privacy
+
+Pointfix runs entirely in your browser. It does not send page content or your instructions anywhere. Points are stored in the browser's local storage only.
+
+## Background
+
+The idea was inspired by UISelector2AI, which turns a selected element into a prompt for AI. Pointfix is a separate implementation written from scratch.
+
+## License
 
 MIT License
