@@ -338,6 +338,7 @@
 
   // Pins already shown on this page; only new ones get the pop-in animation.
   const shownPinIds = new Set();
+  const popPinIds = new Set();
   let pinsReady = false;
 
   async function renderPins() {
@@ -361,8 +362,16 @@
       pin.style.left = x + "px";
       pin.style.top = y + "px";
       const key = a.id || "i" + i;
-      if (pinsReady && !shownPinIds.has(key)) pin.classList.add("yb-pin-in");
-      shownPinIds.add(key);
+      if (!shownPinIds.has(key)) {
+        shownPinIds.add(key);
+        if (pinsReady) {
+          // Re-renders happen right after adding (storage change + direct call),
+          // so keep the pop-in class for a short window to avoid losing it.
+          popPinIds.add(key);
+          setTimeout(() => popPinIds.delete(key), 800);
+        }
+      }
+      if (popPinIds.has(key)) pin.classList.add("yb-pin-in");
       pinsLayer.appendChild(pin);
     });
     pinsReady = true;
