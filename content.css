@@ -207,7 +207,8 @@ html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
 
 .yb-editor {
   position: fixed;
-  z-index: 2147483002;
+  /* Above the bottom-right bar, so its buttons are never covered. */
+  z-index: 2147483005;
   width: 340px;
   box-sizing: border-box;
   background: #111827;
