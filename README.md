@@ -6,7 +6,7 @@ Describing a small UI change in words is hard. "The blue button at the top, make
 
 ## How to use
 
-1. **Start Point mode** — press `Alt+S`, or click the Pointfix icon.
+1. **Start Point mode** — press `Alt+S`, or click **Start** on the bar at the bottom right.
 2. **Click the part you want to change** — type what should change and press **Add point**. A dashed box with a number stays on the page.
 3. **Copy the prompt** — press `Alt+C` (or the **Copy prompt** button), then paste it into your AI agent.
 
@@ -46,6 +46,8 @@ After the changes, briefly tell me what you changed.
 | Stop Point mode | `Esc` |
 
 The bottom-right bar on each page has the same three actions as buttons. You can change shortcuts at `chrome://extensions/shortcuts`.
+
+Click the **Pointfix icon** in the toolbar to show or hide the bar on every page. When the bar is hidden, use the shortcuts.
 
 ## Features
 

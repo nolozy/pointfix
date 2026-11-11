@@ -11,7 +11,7 @@
     "128": "icons/icon.svg"
   },
   "action": {
-    "default_title": "Pointfix: start or stop Point mode",
+    "default_title": "Pointfix: click to show or hide the bar",
     "default_icon": {
       "16": "icons/icon.svg",
       "32": "icons/icon.svg",
@@ -43,7 +43,7 @@
     },
     "delete-all": {
       "suggested_key": { "default": "Alt+X" },
-      "description": "Delete all points on this page"
+      "description": "Delete all points"
     }
   }
 }

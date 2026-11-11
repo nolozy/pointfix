@@ -5,6 +5,11 @@ html.yb-point:not(.yb-editing), html.yb-point:not(.yb-editing) * {
   cursor: none !important;
 }
 
+/* Over our own UI (the bottom-right bar) show the normal pointer instead. */
+html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
+  cursor: pointer !important;
+}
+
 /* Hover frame: moves with transform and eases between elements. */
 .yb-overlay {
   position: fixed;
@@ -155,6 +160,8 @@ html.yb-point:not(.yb-editing), html.yb-point:not(.yb-editing) * {
   white-space: nowrap;
 }
 
+.yb-bar-hidden { display: none !important; }
+
 .yb-bar-btn {
   display: inline-flex;
   align-items: center;
@@ -163,8 +170,9 @@ html.yb-point:not(.yb-editing), html.yb-point:not(.yb-editing) * {
   color: #e5e7eb;
   border: 1px solid #4b5563;
   border-radius: 8px;
-  padding: 6px 10px;
-  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
+  padding: 9px 14px;
+  min-height: 36px;
+  font: 14px/1.4 -apple-system, "Segoe UI", sans-serif;
   cursor: pointer;
   transition: transform 0.12s ease-out, background 0.15s ease-out, filter 0.15s ease-out;
 }
@@ -178,11 +186,15 @@ html.yb-point:not(.yb-editing), html.yb-point:not(.yb-editing) * {
   border-color: transparent;
   color: #fff;
   font-weight: 700;
+  min-width: 96px;
+  justify-content: center;
 }
 
+/* While Point mode is on, the Stop button is red and easy to see. */
 .yb-bar-on {
   background: #dc2626 !important;
   border-color: #f87171 !important;
+  color: #fff !important;
 }
 
 .yb-kbd {

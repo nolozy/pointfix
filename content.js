@@ -226,6 +226,13 @@
     pointBtn.classList.toggle("yb-bar-on", state.point);
   }
 
+  // The bar can be hidden for every page from the toolbar icon. Point mode still
+  // works with Alt+S and Esc while it is hidden.
+  const BAR_KEY = "yb_bar_visible";
+  function applyBarVisible(visible) {
+    bar.classList.toggle("yb-bar-hidden", !visible);
+  }
+
   function ensureMounted() {
     if (!overlay.isConnected) document.documentElement.appendChild(overlay);
     if (!cursorEl.isConnected) document.documentElement.appendChild(cursorEl);
@@ -407,9 +414,23 @@
     overlayLabel.textContent = labelFor(el);
   }, true);
 
-  // Arrow follows the mouse only in Point mode.
+  // Arrow follows the mouse only in Point mode. Over our own bar the normal
+  // pointer is shown instead, so the arrow does not lag behind down there.
+  let overUI = false;
   document.addEventListener("mousemove", (ev) => {
     if (!state.point) return;
+    if (isOwnUI(ev.target)) {
+      overUI = true;
+      cursorEl.classList.remove("yb-on");
+      return;
+    }
+    if (overUI) {
+      // Coming back from the bar: start the arrow at the mouse, not where it was.
+      overUI = false;
+      cur.x = ev.clientX;
+      cur.y = ev.clientY;
+      cursorEl.classList.add("yb-on");
+    }
     cur.tx = ev.clientX;
     cur.ty = ev.clientY;
     if (!cur.raf) cur.raf = requestAnimationFrame(tickCursor);
@@ -463,7 +484,9 @@
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes[STORAGE_KEY]) render();
+    if (area !== "local") return;
+    if (changes[STORAGE_KEY]) render();
+    if (changes[BAR_KEY]) applyBarVisible(changes[BAR_KEY].newValue !== false);
   });
 
   // ---------- page changes inside the site (SPA navigation) ----------
@@ -485,4 +508,5 @@
 
   ensureMounted();
   render();
+  chrome.storage.local.get(BAR_KEY).then((d) => applyBarVisible(d[BAR_KEY] !== false));
 })();
