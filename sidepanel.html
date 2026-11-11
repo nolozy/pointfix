@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pointfix</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header class="head">
+  <div class="logo">👆</div>
+  <div>
+    <h1>Pointfix</h1>
+    <p class="sub">「ここをこうして」をクリックで指定 → AIに貼るだけ</p>
+  </div>
+</header>
+
+<section class="actions">
+  <button id="btn-inspect" class="btn btn-primary big">👆 指さしをはじめる</button>
+  <button id="btn-copy" class="btn btn-accent big" disabled>📋 プロンプトをコピー</button>
+  <div class="row">
+    <span id="count" class="count">まだ指さしがありません</span>
+    <button id="btn-clear" class="btn btn-ghost small">すべて消す</button>
+  </div>
+</section>
+
+<section id="empty" class="empty">
+  <h2>使い方は3ステップ</h2>
+  <ol>
+    <li><b>指さしをはじめる</b>を押す</li>
+    <li>直したいところを<b>クリック</b>して、やってほしいことを選ぶ／書く</li>
+    <li><b>プロンプトをコピー</b>して、AIエージェントに貼るだけ</li>
+  </ol>
+  <p class="hint">ショートカット: Alt+O = 指さし開始／停止、Alt+C = コピー、Alt+X = すべて消す</p>
+</section>
+
+<section id="list-wrap" class="list-wrap" hidden>
+  <h2>指さしリスト</h2>
+  <div id="list"></div>
+  <label class="overall-label" for="overall">全体の要望（任意）</label>
+  <textarea id="overall" rows="2" placeholder="例：スマホ表示でも崩れないようにして"></textarea>
+  <h2>プロンプトのプレビュー</h2>
+  <textarea id="preview" rows="12" readonly></textarea>
+</section>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="prompt.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>

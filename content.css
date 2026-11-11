@@ -1,0 +1,276 @@
+/* Pointfix - in-page UI (all classes are yb- prefixed) */
+
+/* Hide the native cursor while inspecting; our own arrow follows the mouse. */
+html.yb-inspecting:not(.yb-editing), html.yb-inspecting:not(.yb-editing) * {
+  cursor: none !important;
+}
+
+/* Hover frame: moves with transform and eases between elements. */
+.yb-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483001;
+  pointer-events: none;
+  border: 2px solid #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 6px;
+  box-sizing: border-box;
+  opacity: 0;
+  will-change: transform, width, height;
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.15s ease-out;
+}
+
+.yb-overlay.yb-on { opacity: 1; }
+
+.yb-overlay-label {
+  position: absolute;
+  left: -2px;
+  top: -30px;
+  max-width: 420px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #4f46e5;
+  color: #fff;
+  font: 12px/1.4 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* Arrow cursor: lags slightly behind the real mouse for a soft feel. */
+.yb-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483002;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 0.15s ease-out;
+}
+
+.yb-cursor.yb-on { opacity: 1; }
+
+.yb-cursor svg {
+  display: block;
+  transform-origin: 4px 2px;
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+.yb-cursor.yb-press svg { transform: scale(0.82); }
+
+/* Click ring that expands from the click point. */
+.yb-ripple {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #6366f1;
+  background: rgba(99, 102, 241, 0.18);
+  pointer-events: none;
+  z-index: 2147483002;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: yb-ring 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes yb-ring {
+  from { transform: translate(-50%, -50%) scale(0.2); opacity: 0.95; }
+  to   { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+}
+
+.yb-pins {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+}
+
+.yb-pin {
+  position: absolute;
+  transform: translate(-40%, -40%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  color: #1f2937;
+  font: bold 14px/22px -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* New pins pop in with a small overshoot. */
+.yb-pin-in {
+  animation: yb-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes yb-pop {
+  0%   { transform: translate(-40%, -40%) scale(0); }
+  60%  { transform: translate(-40%, -40%) scale(1.25); }
+  100% { transform: translate(-40%, -40%) scale(1); }
+}
+
+.yb-editor {
+  position: fixed;
+  z-index: 2147483002;
+  width: 340px;
+  box-sizing: border-box;
+  background: #111827;
+  color: #f9fafb;
+  border: 1px solid #374151;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 14px;
+  font: 13px/1.5 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+}
+
+.yb-editor-in {
+  animation: yb-editor-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes yb-editor-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.yb-editor-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.yb-editor-target {
+  color: #a5b4fc;
+  font-size: 12px;
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.yb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.yb-chip {
+  background: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #4b5563;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out, transform 0.12s ease-out;
+}
+
+.yb-chip:hover { border-color: #818cf8; }
+.yb-chip:active { transform: scale(0.94); }
+
+.yb-chip-on {
+  background: #4f46e5 !important;
+  border-color: #818cf8 !important;
+  color: #fff !important;
+}
+
+.yb-editor-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 8px;
+  font: 13px/1.5 inherit;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.yb-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yb-spacer { flex: 1; }
+
+.yb-mic {
+  background: none;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.yb-mic-on {
+  background: #dc2626 !important;
+  border-color: #f87171 !important;
+  color: #fff !important;
+}
+
+.yb-btn {
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.12s ease-out, filter 0.15s ease-out;
+}
+
+.yb-btn:hover { filter: brightness(1.12); }
+.yb-btn:active { transform: scale(0.96); }
+
+.yb-btn-ghost {
+  background: none;
+  color: #9ca3af;
+  border-color: #4b5563;
+}
+
+.yb-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #ec4899);
+  color: #fff;
+  font-weight: 700;
+}
+
+.yb-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 2147483003;
+  background: #111827;
+  color: #fff;
+  border: 1px solid #4f46e5;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font: 13px/1.4 -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: yb-toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes yb-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Respect the OS setting for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .yb-overlay, .yb-cursor, .yb-cursor svg, .yb-ripple, .yb-pin-in,
+  .yb-editor-in, .yb-toast, .yb-chip, .yb-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+}
