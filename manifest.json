@@ -42,7 +42,7 @@
       "description": "Copy the prompt"
     },
     "delete-all": {
-      "suggested_key": { "default": "Alt+D" },
+      "suggested_key": { "default": "Alt+X" },
       "description": "Delete all points on this page"
     }
   }

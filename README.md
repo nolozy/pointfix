@@ -37,7 +37,7 @@ After the changes, briefly tell me what you changed.
 |---|---|
 | Start / stop Point mode | `Alt+S` |
 | Copy the prompt | `Alt+C` |
-| Delete all points on this page | `Alt+D` |
+| Delete all points on this page | `Alt+X` |
 | Stop Point mode | `Esc` |
 
 The bottom-right bar on each page has the same three actions as buttons. You can change shortcuts at `chrome://extensions/shortcuts`.

@@ -211,7 +211,7 @@
   const countEl = makeEl("span", "yb-bar-count", "No points");
   const pointBtn = barButton("Start", "Alt+S", "yb-bar-primary");
   const copyBtn = barButton("Copy prompt", "Alt+C");
-  const deleteBtn = barButton("Delete all", "Alt+D");
+  const deleteBtn = barButton("Delete all", "Alt+X");
   bar.append(countEl, pointBtn, copyBtn, deleteBtn);
   pointBtn.addEventListener("click", () => setPoint(!state.point));
   copyBtn.addEventListener("click", copyPrompt);
