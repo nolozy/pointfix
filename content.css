@@ -162,6 +162,19 @@ html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
 
 .yb-bar-hidden { display: none !important; }
 
+/* Grip to drag the bar; it has no text. */
+.yb-grip {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 2px;
+  color: #6b7390;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.yb-grip:active { cursor: grabbing; }
+
 .yb-bar-btn {
   display: inline-flex;
   align-items: center;

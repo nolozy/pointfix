@@ -233,6 +233,72 @@
     bar.classList.toggle("yb-bar-hidden", !visible);
   }
 
+  // ---------- bar position: drag it by the grip, the place is remembered ----------
+
+  const BAR_POS_KEY = "yb_bar_pos";
+  const grip = makeEl("div", "yb-grip");
+  grip.innerHTML =
+    '<svg width="12" height="22" viewBox="0 0 12 22" aria-hidden="true">' +
+    [[3, 4], [9, 4], [3, 11], [9, 11], [3, 18], [9, 18]]
+      .map(([x, y]) => '<circle cx="' + x + '" cy="' + y + '" r="1.7" fill="currentColor"/>').join("") +
+    "</svg>";
+  bar.insertBefore(grip, bar.firstChild);
+
+  let savedPos = null;
+  let dragging = null;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  // pos is {x, y} in pixels from the top-left of the screen, or null for the default corner.
+  function applyBarPos(pos) {
+    if (!pos) {
+      bar.style.left = "";
+      bar.style.top = "";
+      bar.style.right = "";
+      bar.style.bottom = "";
+      return;
+    }
+    const x = clamp(pos.x, 0, window.innerWidth - bar.offsetWidth);
+    const y = clamp(pos.y, 0, window.innerHeight - bar.offsetHeight);
+    bar.style.left = x + "px";
+    bar.style.top = y + "px";
+    bar.style.right = "auto";
+    bar.style.bottom = "auto";
+  }
+
+  grip.addEventListener("pointerdown", (ev) => {
+    const r = bar.getBoundingClientRect();
+    dragging = { dx: ev.clientX - r.left, dy: ev.clientY - r.top };
+    grip.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+  });
+
+  grip.addEventListener("pointermove", (ev) => {
+    if (!dragging) return;
+    applyBarPos({ x: ev.clientX - dragging.dx, y: ev.clientY - dragging.dy });
+  });
+
+  async function endDrag() {
+    if (!dragging) return;
+    dragging = null;
+    const r = bar.getBoundingClientRect();
+    savedPos = { x: Math.round(r.left), y: Math.round(r.top) };
+    try { await chrome.storage.local.set({ [BAR_POS_KEY]: savedPos }); } catch (e) { /* ignore */ }
+  }
+  grip.addEventListener("pointerup", endDrag);
+  grip.addEventListener("pointercancel", endDrag);
+
+  // Double-click the grip to put the bar back in its default corner.
+  grip.addEventListener("dblclick", async () => {
+    savedPos = null;
+    applyBarPos(null);
+    try { await chrome.storage.local.remove(BAR_POS_KEY); } catch (e) { /* ignore */ }
+  });
+
+  window.addEventListener("resize", () => applyBarPos(savedPos));
+
   function ensureMounted() {
     if (!overlay.isConnected) document.documentElement.appendChild(overlay);
     if (!cursorEl.isConnected) document.documentElement.appendChild(cursorEl);
@@ -497,6 +563,10 @@
     if (area !== "local") return;
     if (changes[STORAGE_KEY]) render();
     if (changes[BAR_KEY]) applyBarVisible(changes[BAR_KEY].newValue !== false);
+    if (changes[BAR_POS_KEY]) {
+      savedPos = changes[BAR_POS_KEY].newValue || null;
+      applyBarPos(savedPos);
+    }
   });
 
   // ---------- page changes inside the site (SPA navigation) ----------
@@ -521,5 +591,9 @@
 
   ensureMounted();
   render();
-  chrome.storage.local.get(BAR_KEY).then((d) => applyBarVisible(d[BAR_KEY] !== false));
+  chrome.storage.local.get([BAR_KEY, BAR_POS_KEY]).then((d) => {
+    applyBarVisible(d[BAR_KEY] !== false);
+    savedPos = d[BAR_POS_KEY] || null;
+    applyBarPos(savedPos);
+  });
 })();

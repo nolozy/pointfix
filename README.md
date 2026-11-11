@@ -48,7 +48,7 @@ After the changes, briefly tell me what you changed.
 | Delete all points | `Alt+X` |
 | Stop Point mode | `Esc` |
 
-- The bar at the bottom right has the same actions as buttons.
+- The bar at the bottom right has the same actions as buttons. Drag its grip (the dots on the left) to move it anywhere; the place is remembered. Double-click the grip to put it back in the bottom-right corner.
 - Click the **Pointfix icon** in the toolbar to show or hide the bar on every page. When the bar is hidden, use the shortcuts.
 - You can change the shortcuts at `chrome://extensions/shortcuts`.
 
