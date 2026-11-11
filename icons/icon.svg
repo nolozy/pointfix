@@ -10,28 +10,18 @@
   <!-- Rounded Square Background (Radius: 28) -->
   <rect x="0" y="0" width="128" height="128" rx="28" ry="28" fill="url(#pointfixGradient)"/>
 
-  <!-- Main Pointer Arrow / Cursor Shape -->
-  <!-- Bold, simple geometry optimized for visibility down to 16x16 px -->
-  <path d="M34 26 
-           L34 94 
-           L53 76 
-           L68 102 
-           L81 94 
-           L66 69 
-           L94 69 
+  <!-- Main Centered Large Pointer Arrow -->
+  <path d="M42 22 
+           L42 102 
+           L64 80 
+           L81 108 
+           L95 99 
+           L78 71 
+           L108 71 
            Z" 
         fill="#ffffff" 
         stroke="#ffffff" 
-        stroke-width="4" 
+        stroke-width="6" 
         stroke-linejoin="round" 
         stroke-linecap="round"/>
-
-  <!-- Target Marker / Pin Base (White Border Ring) -->
-  <circle cx="34" cy="26" r="18" fill="#ffffff"/>
-
-  <!-- Number Pin (Amber Circle inside White Border at Pointer Tip) -->
-  <circle cx="34" cy="26" r="13" fill="#f59e0b"/>
-
-  <!-- Center Pin Dot (Visual Accent simulating pin core) -->
-  <circle cx="34" cy="26" r="5" fill="#ffffff"/>
 </svg>
