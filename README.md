@@ -55,7 +55,7 @@ URL: https://example.com/
 
 ## インストール（開発者モード）
 
-Chrome ウェブストアでの公開準備中です。今は次の手順で使えます。
+Chrome ウェブストアには公開しません。次の手順で使ってください。
 
 1. このリポジトリをダウンロード（または `git clone`）します
 2. Chromeで `chrome://extensions` を開きます
