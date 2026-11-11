@@ -115,17 +115,16 @@
 
   // ---------- prompt ----------
 
+  // Points can come from several pages; each annotation carries its own URL.
   function buildPrompt(list) {
     const lines = [];
-    lines.push("Please update the web page below as described. Change only the annotated elements.");
-    lines.push("");
-    lines.push("# Webpage Context");
-    lines.push("URL: " + list[0].url);
+    lines.push("Please update the web pages below as described. Change only the annotated elements.");
     lines.push("");
     lines.push("# Annotations");
     lines.push("");
     list.forEach((a, i) => {
       lines.push("## Annotation " + (i + 1));
+      lines.push("**URL**: " + a.url);
       lines.push("**Target**: `" + a.selector + "`");
       lines.push("**TagName**: " + a.tagName);
       if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
@@ -274,7 +273,7 @@
       list.push(info);
       await saveAll(list);
       closeEditor();
-      showToast("Point " + list.filter((a) => a.pageKey === pageKey()).length + " added");
+      showToast("Point " + list.length + " added");
     });
     row.append(spacer, cancelBtn, addBtn);
 
@@ -302,11 +301,6 @@
     await chrome.storage.local.set({ [STORAGE_KEY]: list });
   }
 
-  async function pageItems() {
-    const all = await loadAll();
-    return all.filter((a) => a.pageKey === pageKey());
-  }
-
   // ---------- boxes ----------
 
   // Boxes already shown on this page; only new ones get the pop-in animation.
@@ -314,12 +308,16 @@
   const popIds = new Set();
   let ready = false;
 
+  // Draws the boxes that belong to the current page. Numbers follow the global
+  // order, so they match the numbers in the prompt.
   async function render() {
     ensureMounted();
-    const mine = await pageItems();
-    pageCount = mine.length;
+    const all = await loadAll();
+    const currentKey = pageKey();
+    pageCount = all.length;
     boxLayer.textContent = "";
-    mine.forEach((a, i) => {
+    all.forEach((a, i) => {
+      if (a.pageKey !== currentKey) return;
       let x = a.docX, y = a.docY, w = a.width, h = a.height;
       if (a.selector) {
         try {
@@ -358,9 +356,9 @@
   }
 
   async function copyPrompt() {
-    const mine = await pageItems();
-    if (!mine.length) { showToast("No points on this page yet"); return; }
-    const text = buildPrompt(mine);
+    const all = await loadAll();
+    if (!all.length) { showToast("No points yet"); return; }
+    const text = buildPrompt(all);
     let ok = false;
     try {
       await navigator.clipboard.writeText(text);
@@ -373,11 +371,9 @@
 
   async function deleteAll() {
     const all = await loadAll();
-    const rest = all.filter((a) => a.pageKey !== pageKey());
-    const removed = all.length - rest.length;
-    if (!removed) { showToast("No points on this page"); return; }
-    await saveAll(rest);
-    showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
+    if (!all.length) { showToast("No points yet"); return; }
+    await saveAll([]);
+    showToast("Deleted " + all.length + (all.length === 1 ? " point" : " points"));
   }
 
   // ---------- point mode ----------
@@ -469,6 +465,23 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes[STORAGE_KEY]) render();
   });
+
+  // ---------- page changes inside the site (SPA navigation) ----------
+
+  // Single-page sites change the URL without a page load, so re-draw the boxes
+  // whenever the URL changes. Checking the URL is cheap, so a short interval is fine.
+  let lastKey = pageKey();
+  function checkLocation() {
+    const k = pageKey();
+    if (k === lastKey) return;
+    lastKey = k;
+    render();
+    // The new page may still be drawing; draw again once it has settled.
+    setTimeout(render, 800);
+  }
+  window.addEventListener("popstate", checkLocation);
+  window.addEventListener("hashchange", checkLocation);
+  setInterval(checkLocation, 400);
 
   ensureMounted();
   render();

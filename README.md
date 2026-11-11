@@ -15,18 +15,23 @@ Press `Alt+S` again or `Esc` to stop Point mode.
 ## Example prompt
 
 ```markdown
-Please update the web page below as described. Change only the annotated elements.
-
-# Webpage Context
-URL: https://example.com/
+Please update the web pages below as described. Change only the annotated elements.
 
 # Annotations
 
 ## Annotation 1
+**URL**: https://example.com/
 **Target**: `button#cta`
 **TagName**: BUTTON
 **Inner Content**: Sign up
 **Instruction**: make it bigger and blue
+
+## Annotation 2
+**URL**: https://example.com/pricing
+**Target**: `#plan-pro`
+**TagName**: DIV
+**Inner Content**: Pro plan
+**Instruction**: move this above the free plan
 
 After the changes, briefly tell me what you changed.
 ```
@@ -37,7 +42,7 @@ After the changes, briefly tell me what you changed.
 |---|---|
 | Start / stop Point mode | `Alt+S` |
 | Copy the prompt | `Alt+C` |
-| Delete all points on this page | `Alt+X` |
+| Delete all points | `Alt+X` |
 | Stop Point mode | `Esc` |
 
 The bottom-right bar on each page has the same three actions as buttons. You can change shortcuts at `chrome://extensions/shortcuts`.
@@ -45,8 +50,10 @@ The bottom-right bar on each page has the same three actions as buttons. You can
 ## Features
 
 - **Hover to highlight, click to point** — a short label shows what you are pointing at.
-- **Dashed boxes with numbers** — every point stays visible on the page, so you can see what you asked for.
-- **One-click delete** — remove all points on the current page at once.
+- **Dashed boxes with numbers** — points show on the page they were made on, and the numbers match the prompt.
+- **Several pages in one prompt** — points from different pages (including pages in a single-page site) are copied together, each with its own URL.
+- **Points stay put** — going to another page hides its points; coming back shows them again.
+- **One-click delete** — remove all points at once.
 - **Short prompt** — the URL, a CSS selector, the tag name, the text, and your instruction. Nothing else.
 - **Smooth motion** — an arrow cursor that follows the mouse, and a soft hover frame and click ripple. See [Motion](#motion).
 - **Runs locally** — nothing is sent to any server.
