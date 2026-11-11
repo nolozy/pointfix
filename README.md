@@ -16,6 +16,7 @@ Press `Alt+S` again or `Esc` to stop Point mode.
 
 ```markdown
 Please update the web pages below as described. Change only the annotated elements.
+After the changes, briefly tell me what you changed.
 
 # Annotations
 
@@ -32,8 +33,6 @@ Please update the web pages below as described. Change only the annotated elemen
 **TagName**: DIV
 **Inner Content**: Pro plan
 **Instruction**: move this above the free plan
-
-After the changes, briefly tell me what you changed.
 ```
 
 ## Shortcuts

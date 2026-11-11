@@ -119,6 +119,7 @@
   function buildPrompt(list) {
     const lines = [];
     lines.push("Please update the web pages below as described. Change only the annotated elements.");
+    lines.push("After the changes, briefly tell me what you changed.");
     lines.push("");
     lines.push("# Annotations");
     lines.push("");
@@ -131,7 +132,6 @@
       lines.push("**Instruction**: " + a.instruction);
       lines.push("");
     });
-    lines.push("After the changes, briefly tell me what you changed.");
     return lines.join("\n");
   }
 
