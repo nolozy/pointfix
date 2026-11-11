@@ -24,25 +24,50 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "exclude_matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*",
+        "http://127.0.0.1:8790/ai.html"
+      ]
     }
   ],
-  "permissions": ["storage"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "commands": {
     "toggle-point": {
-      "suggested_key": { "default": "Alt+S" },
+      "suggested_key": {
+        "default": "Alt+S"
+      },
       "description": "Start or stop Point mode"
     },
     "copy-prompt": {
-      "suggested_key": { "default": "Alt+C" },
+      "suggested_key": {
+        "default": "Alt+C"
+      },
       "description": "Copy the prompt"
     },
     "delete-all": {
-      "suggested_key": { "default": "Alt+X" },
+      "suggested_key": {
+        "default": "Alt+X"
+      },
       "description": "Delete all points"
     }
   }
