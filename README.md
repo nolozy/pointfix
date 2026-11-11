@@ -1,16 +1,20 @@
 # Pointfix
 
-**Point at any part of a web page and copy a prompt that your AI agent can act on.**
+**日本語** | [English](README.md)
 
-Describing a small UI change in words is hard. "The blue button at the top, make it a bit bigger..." Pointfix lets you click the exact part, type what should change, and copy a short prompt with the CSS selector and the instruction. Paste it into Claude, ChatGPT, Cursor, or any AI agent.
+![Pointfix](docs/thumbnail.png)
+
+Point at any part of a web page, describe the change, and copy a short prompt for your AI agent. A Chrome extension (Manifest V3).
+
+Describing a small UI change in words is hard: "the blue button at the top, make it a bit bigger…". With Pointfix you click the exact part, type what should change, and paste the prompt into Claude, ChatGPT, Cursor, or any AI agent.
 
 ## How to use
 
 1. **Start Point mode** — press `Alt+S`, or click **Start** on the bar at the bottom right.
 2. **Click the part you want to change** — type what should change and press **Add point**. A dashed box with a number stays on the page.
-3. **Copy the prompt** — press `Alt+C` (or the **Copy prompt** button), then paste it into your AI agent.
+3. **Copy the prompt** — press `Alt+C` (or **Copy prompt**), then paste it into your AI agent.
 
-Press `Alt+S` again or `Esc` to stop Point mode.
+Press `Alt+S` or `Esc` to stop Point mode. Points on other pages of the same site are kept too, so one prompt can cover several pages.
 
 ## Example prompt
 
@@ -35,50 +39,76 @@ After the changes, briefly tell me what you changed.
 **Instruction**: move this above the free plan
 ```
 
-## Shortcuts
+## Controls
 
 | Action | Key |
-|---|---|
+| --- | --- |
 | Start / stop Point mode | `Alt+S` |
 | Copy the prompt | `Alt+C` |
 | Delete all points | `Alt+X` |
 | Stop Point mode | `Esc` |
 
-The bottom-right bar on each page has the same three actions as buttons. You can change shortcuts at `chrome://extensions/shortcuts`.
-
-Click the **Pointfix icon** in the toolbar to show or hide the bar on every page. When the bar is hidden, use the shortcuts.
+- The bar at the bottom right has the same actions as buttons.
+- Click the **Pointfix icon** in the toolbar to show or hide the bar on every page. When the bar is hidden, use the shortcuts.
+- You can change the shortcuts at `chrome://extensions/shortcuts`.
 
 ## Features
 
 - **Hover to highlight, click to point** — a short label shows what you are pointing at.
-- **Dashed boxes with numbers** — points show on the page they were made on, and the numbers match the prompt.
-- **Several pages in one prompt** — points from different pages (including pages in a single-page site) are copied together, each with its own URL.
-- **Points stay put** — going to another page hides its points; coming back shows them again.
-- **One-click delete** — remove all points at once.
+- **Dashed boxes with numbers** — points stay visible on the page where they were made, and the numbers match the prompt.
+- **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Short prompt** — the URL, a CSS selector, the tag name, the text, and your instruction. Nothing else.
-- **Smooth motion** — an arrow cursor that follows the mouse, and a soft hover frame and click ripple. See [Motion](#motion).
 - **Runs locally** — nothing is sent to any server.
 
-## Motion
+### Motion
 
-The motion uses only CSS `transform` and `opacity`, with no animation library, to keep the page light.
+The motion uses only CSS `transform` and `opacity`, with no animation library, to keep pages light.
 
-- **Arrow cursor** — follows the mouse with a slight delay while Point mode is on.
-- **Hover frame** — slides and resizes to the element you point at.
-- **Click ripple** — a ring expands from the click point.
-- **Box pop-in** — a new dashed box appears with a small bounce.
-- **Editor and toast** — fade in when they appear.
+- An arrow cursor follows the mouse with a slight delay while Point mode is on.
+- The hover frame slides and resizes to the element you point at.
+- A ring expands from each click.
+- New boxes pop in, and the editor and messages fade in.
 
-When the OS setting "Reduce motion" is on (`prefers-reduced-motion`), all of these motions are turned off.
+When the OS setting "Reduce motion" is on, all of these are turned off.
 
-## Install (developer mode)
+## Install (Chrome)
 
-Pointfix is not on the Chrome Web Store. Load the folder instead.
+Pointfix is not on the Chrome Web Store, so you load the folder directly. It takes about a minute.
 
-1. Download this repository (or `git clone` it).
-2. Open `chrome://extensions` in Chrome.
-3. Turn on **Developer mode** (top right).
-4. Click **Load unpacked** and choose this folder.
+### 1. Get the files
+
+**Download as ZIP (no Git needed, recommended)**
+
+1. **[Click here to download the ZIP](https://github.com/nolozy/pointfix/archive/refs/heads/main.zip)**.
+2. Unzip `pointfix-main.zip`.
+3. Put the folder somewhere permanent (for example in `Documents`).
+   - **Note:** if you move or delete the folder after loading it, the extension stops working.
+
+**Or with Git**
+
+```bash
+git clone https://github.com/nolozy/pointfix.git
+```
+
+### 2. Load it in Chrome
+
+1. Open `chrome://extensions` in the address bar.
+2. Turn on **Developer mode** (top right).
+3. Click **Load unpacked** (top left).
+4. Select the folder that **directly contains `manifest.json`**. After unzipping there may be a folder inside a folder (`pointfix-main/pointfix-main`), so pick the inner one if needed.
+5. **Pointfix** should appear in the list.
+
+### 3. Pin it (optional)
+
+Click the puzzle-piece icon 🧩 in Chrome's toolbar and pin **Pointfix** so the icon is always visible.
+
+> While Developer mode is on, Chrome may ask on startup whether to disable extensions running in developer mode. Choose "Cancel" and the extension keeps working.
+
+## Limitations
+
+- **Pages Chrome protects:** `chrome://` pages, the Chrome Web Store and Chrome's PDF viewer cannot be used.
+- **Local files** (`file://`) need "Allow access to file URLs" turned on in the extension's details.
+- **Single-page sites** keep the same points, but a point is drawn only when its element is on the current page.
 
 ## Privacy
 
@@ -87,6 +117,20 @@ Pointfix runs entirely in your browser. It does not send page content or your in
 ## Background
 
 The idea was inspired by UISelector2AI, which turns a selected element into a prompt for AI. Pointfix is a separate implementation written from scratch.
+
+## Files
+
+```
+pointfix/
+├── manifest.json     Manifest V3
+├── background.js     Service worker: toolbar icon, shortcuts, bar visibility
+├── content.js        Point mode, the bar, the boxes and the prompt
+├── content.css       Styles of the in-page UI
+├── icons/            Extension icons (PNG for Chrome, SVG source)
+├── docs/             Images used in this README
+├── README.md         English
+└── README.ja.md      Japanese
+```
 
 ## License
 
