@@ -276,11 +276,15 @@
       const text = input.value.trim();
       if (!text) { showToast("Type what should change"); input.focus(); return; }
       info.instruction = text;
-      const list = await loadAll();
-      list.push(info);
-      await saveAll(list);
-      closeEditor();
-      showToast("Point " + list.length + " added");
+      try {
+        const list = await loadAll();
+        list.push(info);
+        await saveAll(list);
+        closeEditor();
+        showToast("Point " + list.length + " added");
+      } catch (e) {
+        showToast("Pointfix was updated. Please reload this page (F5).", 4000);
+      }
     });
     row.append(spacer, cancelBtn, addBtn);
 
@@ -298,6 +302,11 @@
   }
 
   // ---------- storage ----------
+
+  // False after the extension was reloaded or updated while this page stayed open.
+  function alive() {
+    try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; }
+  }
 
   async function loadAll() {
     const data = await chrome.storage.local.get(STORAGE_KEY);
@@ -318,6 +327,7 @@
   // Draws the boxes that belong to the current page. Numbers follow the global
   // order, so they match the numbers in the prompt.
   async function render() {
+    if (!alive()) return;
     ensureMounted();
     const all = await loadAll();
     const currentKey = pageKey();
@@ -504,7 +514,10 @@
   }
   window.addEventListener("popstate", checkLocation);
   window.addEventListener("hashchange", checkLocation);
-  setInterval(checkLocation, 400);
+  const locationTimer = setInterval(() => {
+    if (!alive()) { clearInterval(locationTimer); return; }
+    checkLocation();
+  }, 400);
 
   ensureMounted();
   render();
