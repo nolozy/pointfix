@@ -343,3 +343,33 @@ html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
     transition: none !important;
   }
 }
+
+/* Area: the rectangle while dragging, and saved areas (pink, to tell them from element points). */
+.yb-area-draft {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483001;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px dashed #ec4899;
+  background: rgba(236, 72, 153, 0.08);
+  border-radius: 6px;
+}
+
+.yb-area-size {
+  position: absolute;
+  left: -2px;
+  top: -28px;
+  background: #db2777;
+  color: #fff;
+  font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.yb-box-area {
+  border-color: #ec4899;
+  background: rgba(236, 72, 153, 0.06);
+}

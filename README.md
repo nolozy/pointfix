@@ -47,6 +47,7 @@ After the changes, briefly tell me what you changed.
 | --- | --- |
 | Start / stop Point mode | `Alt+S` |
 | Pick the parent / go back to the child | `↑` / `↓` (while pointing) |
+| Mark an area | Drag on the page (while pointing) |
 | Copy the prompt | `Alt+C` |
 | Delete all points on this site | `Alt+X` |
 | Stop Point mode | `Esc` |
@@ -62,6 +63,7 @@ After the changes, briefly tell me what you changed.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
 - **Edit or delete one point** — click its number.
+- **Areas** — while pointing, drag to draw a rectangle (pink). Use it for a whole region or for empty space ("add a button here"). The prompt gets the area's size and place, the element around it and the elements inside it. `Esc` cancels a drag.
 - **Parent and child** — while pointing, press `↑` to pick the parent of the highlighted element (for example the whole card instead of one line) and `↓` to go back. Moving the mouse starts again from the element under it.
 - **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9 (App)`), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
 - **Current values** — the size, font, colors, padding, margin, border and radius the element has now, so "bigger" or "rounder" has a starting point.

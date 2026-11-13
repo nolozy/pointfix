@@ -290,6 +290,21 @@
     list.forEach((a, i) => {
       lines.push("## Annotation " + (i + 1));
       lines.push("**URL**: " + a.url);
+      if (a.kind === "area") {
+        // An area drawn by dragging: where it is, what holds it and what is in it.
+        lines.push("**Area**: " + a.width + "×" + a.height + "px at x " + a.docX + ", y " + a.docY + " on the page");
+        lines.push("**Around**: `" + a.selector + "` (" + a.tagName + ")");
+        if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+        else if (a.component) lines.push("**Component**: " + a.component);
+        if (a.inside && a.inside.length) {
+          lines.push("**Inside**: " + a.inside.map((x) => "`" + x.selector + "`" + (x.text ? ' "' + x.text + '"' : "")).join("; "));
+        } else {
+          lines.push("**Inside**: (empty space)");
+        }
+        lines.push("**Instruction**: " + a.instruction);
+        lines.push("");
+        return;
+      }
       lines.push("**Target**: `" + a.selector + "`");
       // Where the element comes from in the code, when the dev build tells us.
       if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
@@ -616,7 +631,8 @@
     site.forEach((a, i) => {
       if (a.pageKey !== currentKey) return;
       let x = a.docX, y = a.docY, w = a.width, h = a.height;
-      if (a.selector) {
+      // An area stays where it was drawn; an element point follows its element.
+      if (a.selector && a.kind !== "area") {
         try {
           const el = document.querySelector(a.selector);
           if (el) {
@@ -628,7 +644,7 @@
           }
         } catch (e) { /* keep stored position */ }
       }
-      const box = makeEl("div", "yb-box");
+      const box = makeEl("div", a.kind === "area" ? "yb-box yb-box-area" : "yb-box");
       box.style.left = x + "px";
       box.style.top = y + "px";
       box.style.width = w + "px";
@@ -693,7 +709,7 @@
     if (on) {
       ensureMounted();
       cursorEl.classList.add("yb-on");
-      showToast("Point mode on. Click what you want to change. ↑/↓ for parent/child, Esc to stop.", 3000);
+      showToast("Point mode on. Click an element or drag an area. ↑/↓ for parent/child, Esc to stop.", 3000);
     } else {
       hideOverlay();
       closeEditor();
@@ -719,7 +735,7 @@
   }
 
   document.addEventListener("mouseover", (ev) => {
-    if (!state.point || state.editing) return;
+    if (!state.point || state.editing || area.drawing) return;
     const el = ev.target;
     if (!el || el.nodeType !== 1 || isOwnUI(el)) { hideOverlay(); return; }
     hoverEl = el;
@@ -787,12 +803,143 @@
     cursorEl.classList.remove("yb-press");
   }, true);
 
+  // ---------- area: drag to draw a rectangle ----------
+
+  const area = { start: null, drawing: false, draft: null, skipClick: false };
+
+  function areaRect(a, b) {
+    return {
+      left: Math.min(a.x, b.x), top: Math.min(a.y, b.y),
+      right: Math.max(a.x, b.x), bottom: Math.max(a.y, b.y),
+      get width() { return this.right - this.left; },
+      get height() { return this.bottom - this.top; }
+    };
+  }
+
+  function drawDraft(r) {
+    if (!area.draft) {
+      area.draft = makeEl("div", "yb-area-draft");
+      area.draft.appendChild(makeEl("div", "yb-area-size"));
+      document.documentElement.appendChild(area.draft);
+    }
+    area.draft.style.transform = "translate(" + r.left + "px, " + r.top + "px)";
+    area.draft.style.width = r.width + "px";
+    area.draft.style.height = r.height + "px";
+    area.draft.firstChild.textContent = Math.round(r.width) + "×" + Math.round(r.height);
+  }
+
+  function removeDraft() {
+    if (area.draft) { area.draft.remove(); area.draft = null; }
+  }
+
+  function covers(er, r, pad) {
+    return er.left <= r.left + pad && er.top <= r.top + pad && er.right >= r.right - pad && er.bottom >= r.bottom - pad;
+  }
+
+  // The smallest element that holds the whole area.
+  function containerFor(r) {
+    let el = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+    while (el && el !== document.body && el !== document.documentElement) {
+      // Allow a few pixels of overshoot: hand-drawn areas rarely hit an edge exactly.
+      if (!isOwnUI(el) && covers(el.getBoundingClientRect(), r, 10)) return el;
+      el = el.parentElement;
+    }
+    return document.body;
+  }
+
+  // Top-level elements that are (almost) fully inside the area, at most six.
+  function elementsInside(root, r) {
+    const out = [];
+    let visits = 0;
+    (function visit(node) {
+      for (const child of node.children) {
+        if (out.length >= 6 || ++visits > 3000) return;
+        if (isOwnUI(child)) continue;
+        const er = child.getBoundingClientRect();
+        if (er.width < 4 || er.height < 4) continue;
+        const w = Math.min(er.right, r.right) - Math.max(er.left, r.left);
+        const h = Math.min(er.bottom, r.bottom) - Math.max(er.top, r.top);
+        if (w <= 0 || h <= 0) continue;
+        if ((w * h) / (er.width * er.height) >= 0.9) out.push(child);
+        else visit(child);
+      }
+    })(root);
+    return out;
+  }
+
+  function finishArea(r) {
+    const container = containerFor(r);
+    const inside = elementsInside(container, r);
+    const probe = probeSource(container);
+    const id = "yb" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const info = {
+      id,
+      kind: "area",
+      framework: (probe && probe.framework) || "",
+      component: (probe && probe.component) || "",
+      source: sourceText(probe),
+      pageKey: pageKey(),
+      url: location.href,
+      selector: buildSelector(container),
+      tagName: container.tagName,
+      innerText: "",
+      inside: inside.map((el) => {
+        const t = shortText(el);
+        return { selector: buildSelector(el), text: t.length > 30 ? t.slice(0, 30) + "..." : t };
+      }),
+      instruction: "",
+      docX: Math.round(r.left + window.scrollX),
+      docY: Math.round(r.top + window.scrollY),
+      width: Math.round(r.width),
+      height: Math.round(r.height)
+    };
+    const where = info.source || info.component;
+    const label = "Area " + info.width + "×" + info.height + " · " +
+      (inside.length ? inside.length + (inside.length === 1 ? " element" : " elements") + " inside" : "empty space") +
+      (where ? "\n" + (info.component && info.source ? info.component + " · " : "") + where : "");
+    openEditor(info, label, { left: r.left, top: r.top, right: r.right, bottom: r.bottom });
+  }
+
+  window.addEventListener("pointerdown", (ev) => {
+    if (!state.point || state.editing || ev.button !== 0 || isOwnUI(ev.target)) return;
+    area.start = { x: ev.clientX, y: ev.clientY };
+  }, true);
+
+  window.addEventListener("pointermove", (ev) => {
+    if (!area.start || !(ev.buttons & 1)) return;
+    const now = { x: ev.clientX, y: ev.clientY };
+    if (!area.drawing && Math.hypot(now.x - area.start.x, now.y - area.start.y) < 8) return;
+    if (!area.drawing) { area.drawing = true; hideOverlay(); }
+    drawDraft(areaRect(area.start, now));
+  }, true);
+
+  window.addEventListener("pointerup", (ev) => {
+    if (area.cancelled) {
+      // Esc was pressed while dragging: the release must not pick an element either.
+      area.cancelled = false;
+      area.skipClick = true;
+      setTimeout(() => { area.skipClick = false; }, 60);
+      return;
+    }
+    if (!area.start) return;
+    const start = area.start;
+    area.start = null;
+    if (!area.drawing) return;           // a plain click: handled by the click listener
+    area.drawing = false;
+    area.skipClick = true;               // the click that follows the drag is not a pick
+    setTimeout(() => { area.skipClick = false; }, 60);   // no click came (released outside)
+    const r = areaRect(start, { x: ev.clientX, y: ev.clientY });
+    removeDraft();
+    if (r.width >= 12 && r.height >= 12) finishArea(r);
+  }, true);
+
   window.addEventListener("click", (ev) => {
     if (!state.point) return;
     const target = ev.target;
     if (!target || target.nodeType !== 1 || isOwnUI(target)) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (area.skipClick) { area.skipClick = false; return; }
     if (state.editing) return;
     // Use the element chosen with ↑/↓ when it is related to the clicked one.
     const el = pickEl && pickEl.isConnected && (pickEl.contains(target) || target.contains(pickEl)) ? pickEl : target;
@@ -821,7 +968,13 @@
 
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") {
-      if (state.editing) closeEditor();
+      if (area.drawing || area.start) {
+        // Cancel the area being drawn.
+        area.cancelled = true;
+        area.start = null;
+        area.drawing = false;
+        removeDraft();
+      } else if (state.editing) closeEditor();
       else if (state.point) setPoint(false);
     }
   }, true);
