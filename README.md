@@ -45,6 +45,7 @@ After the changes, briefly tell me what you changed.
 | Action | Key |
 | --- | --- |
 | Start / stop Point mode | `Alt+S` |
+| Pick the parent / go back to the child | `↑` / `↓` (while pointing) |
 | Copy the prompt | `Alt+C` |
 | Delete all points on this site | `Alt+X` |
 | Stop Point mode | `Esc` |
@@ -60,6 +61,7 @@ After the changes, briefly tell me what you changed.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
 - **Edit or delete one point** — click its number.
+- **Parent and child** — while pointing, press `↑` to pick the parent of the highlighted element (for example the whole card instead of one line) and `↓` to go back. Moving the mouse starts again from the element under it.
 - **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9 (App)`), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
 - **Short prompt** — the URL, a CSS selector, the source, the tag name, the text, and your instruction. Nothing else.
 - **Runs locally** — nothing is sent to any server.

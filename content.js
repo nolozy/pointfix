@@ -291,6 +291,8 @@
 
   function hideOverlay() {
     overlay.classList.remove("yb-on");
+    hoverEl = null;
+    pickEl = null;
   }
 
   const boxLayer = makeEl("div", "yb-boxes");
@@ -638,7 +640,7 @@
     if (on) {
       ensureMounted();
       cursorEl.classList.add("yb-on");
-      showToast("Point mode on. Click what you want to change. Esc to stop.", 2600);
+      showToast("Point mode on. Click what you want to change. ↑/↓ for parent/child, Esc to stop.", 3000);
     } else {
       hideOverlay();
       closeEditor();
@@ -648,17 +650,50 @@
     updateBar();
   }
 
-  document.addEventListener("mouseover", (ev) => {
-    if (!state.point || state.editing) return;
-    const el = ev.target;
-    if (!el || el.nodeType !== 1 || isOwnUI(el)) { hideOverlay(); return; }
+  // The element under the mouse (hoverEl) and the element that will be picked
+  // (pickEl). Arrow Up/Down move pickEl to the parent or back toward hoverEl.
+  let hoverEl = null;
+  let pickEl = null;
+
+  function showPick(el) {
     const rect = el.getBoundingClientRect();
     // Move with transform and resize; the CSS transition eases between elements.
     overlay.style.transform = "translate(" + rect.left + "px, " + rect.top + "px)";
     overlay.style.width = rect.width + "px";
     overlay.style.height = rect.height + "px";
     overlay.classList.add("yb-on");
-    overlayLabel.textContent = labelFor(el);
+    overlayLabel.textContent = labelFor(el) + "   ↑↓";
+  }
+
+  document.addEventListener("mouseover", (ev) => {
+    if (!state.point || state.editing) return;
+    const el = ev.target;
+    if (!el || el.nodeType !== 1 || isOwnUI(el)) { hideOverlay(); return; }
+    hoverEl = el;
+    pickEl = el;
+    showPick(el);
+  }, true);
+
+  // ↑: the parent of the picked element. ↓: one step back toward the element
+  // under the mouse (or the first child when already there).
+  window.addEventListener("keydown", (ev) => {
+    if (!state.point || state.editing || !pickEl) return;
+    if (ev.key !== "ArrowUp" && ev.key !== "ArrowDown") return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    let next = null;
+    if (ev.key === "ArrowUp") {
+      const p = pickEl.parentElement;
+      if (p && p !== document.documentElement) next = p;
+    } else if (pickEl !== hoverEl && pickEl.contains(hoverEl)) {
+      next = hoverEl;
+      while (next.parentElement && next.parentElement !== pickEl) next = next.parentElement;
+    } else {
+      next = Array.from(pickEl.children).find((c) => !isOwnUI(c) && c.getBoundingClientRect().width > 0) || null;
+    }
+    if (!next) return;
+    pickEl = next;
+    showPick(next);
   }, true);
 
   // Arrow follows the mouse only in Point mode. Over our own bar the normal
@@ -701,11 +736,13 @@
 
   window.addEventListener("click", (ev) => {
     if (!state.point) return;
-    const el = ev.target;
-    if (!el || el.nodeType !== 1 || isOwnUI(el)) return;
+    const target = ev.target;
+    if (!target || target.nodeType !== 1 || isOwnUI(target)) return;
     ev.preventDefault();
     ev.stopPropagation();
     if (state.editing) return;
+    // Use the element chosen with ↑/↓ when it is related to the clicked one.
+    const el = pickEl && pickEl.isConnected && (pickEl.contains(target) || target.contains(pickEl)) ? pickEl : target;
     const rect = el.getBoundingClientRect();
     const info = captureInfo(el);
     hideOverlay();
