@@ -11,7 +11,7 @@ Describing a small UI change in words is hard: "the blue button at the top, make
 ## How to use
 
 1. **Start Point mode** — press `Alt+S`, or click **Start** on the bar at the bottom right.
-2. **Click the part you want to change** — type what should change and press **Add point**. A dashed box with a number stays on the page.
+2. **Click the part you want to change** — type what should change and press **Add point** (or `Ctrl+Enter`). A dashed box with a number stays on the page. Click the number later to edit or delete that point.
 3. **Copy the prompt** — press `Alt+C` (or **Copy prompt**), then paste it into your AI agent.
 
 Press `Alt+S` or `Esc` to stop Point mode. Points on other pages of the same site are kept too, so one prompt can cover several pages.
@@ -45,7 +45,7 @@ After the changes, briefly tell me what you changed.
 | --- | --- |
 | Start / stop Point mode | `Alt+S` |
 | Copy the prompt | `Alt+C` |
-| Delete all points | `Alt+X` |
+| Delete all points on this site | `Alt+X` |
 | Stop Point mode | `Esc` |
 
 - The bar at the bottom right has the same actions as buttons. Drag its grip (the dots on the left) to move it anywhere; the place is remembered. Double-click the grip to put it back in the bottom-right corner.
@@ -57,6 +57,8 @@ After the changes, briefly tell me what you changed.
 - **Hover to highlight, click to point** — a short label shows what you are pointing at.
 - **Dashed boxes with numbers** — points stay visible on the page where they were made, and the numbers match the prompt.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
+- **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
+- **Edit or delete one point** — click its number.
 - **Short prompt** — the URL, a CSS selector, the tag name, the text, and your instruction. Nothing else.
 - **Runs locally** — nothing is sent to any server.
 

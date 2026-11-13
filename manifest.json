@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Pointfix",
   "short_name": "Pointfix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Point at any part of a web page and copy a ready-to-paste prompt for your AI agent.",
   "icons": {
     "16": "icons/icon16.png",
@@ -39,8 +39,7 @@
         "https://claude.ai/*",
         "https://chatgpt.com/*",
         "https://chat.openai.com/*",
-        "https://gemini.google.com/*",
-        "http://127.0.0.1:8790/ai.html"
+        "https://gemini.google.com/*"
       ]
     }
   ],

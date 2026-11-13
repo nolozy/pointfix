@@ -122,6 +122,18 @@ html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
   color: #1f2937;
   font: bold 13px/20px -apple-system, "Segoe UI", sans-serif;
   text-align: center;
+  /* The box ignores the mouse, but its number can be clicked to edit the point. */
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.12s ease-out;
+}
+
+.yb-box-num:hover { transform: scale(1.18); }
+
+.yb-btn-danger {
+  background: none;
+  color: #fca5a5;
+  border-color: #7f1d1d;
 }
 
 /* New boxes pop in with a small overshoot. */

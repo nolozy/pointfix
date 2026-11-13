@@ -23,8 +23,21 @@
   const state = { point: false, editing: false };
   let pageCount = 0;
 
+  // One page = origin + path + query, plus the hash when it is a route (#/... or #!...).
   function pageKey() {
-    return location.origin + location.pathname + location.search;
+    const h = location.hash;
+    const route = h.startsWith("#/") || h.startsWith("#!") ? h : "";
+    return location.origin + location.pathname + location.search + route;
+  }
+
+  // Points belong to a site (origin). Count, numbers, copy and delete only use
+  // the points of the site that is open, so other projects never leak in.
+  function originOf(a) {
+    try { return new URL(a.url).origin; } catch (e) { return ""; }
+  }
+
+  function siteItems(all) {
+    return all.filter((a) => originOf(a) === location.origin);
   }
 
   function isOwnUI(el) {
@@ -41,9 +54,20 @@
 
   // ---------- element description ----------
 
+  // Reads only the first few text nodes. innerText of a large element (or the
+  // whole body) on every hover forces layout and is slow on long pages.
   function shortText(el) {
-    const t = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
-    return t.length > 60 ? t.slice(0, 60) + "..." : t;
+    let out = "";
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = walker.nextNode())) {
+      const p = n.parentElement;
+      if (p && (p.closest("script,style,noscript,template") || isOwnUI(p))) continue;
+      out += " " + n.nodeValue;
+      if (out.length > 200) break;
+    }
+    out = out.replace(/\s+/g, " ").trim();
+    return out.length > 60 ? out.slice(0, 60) + "..." : out;
   }
 
   function labelFor(el) {
@@ -79,18 +103,21 @@
     const parts = [];
     let node = el;
     while (node && node.nodeType === 1 && node.tagName !== "HTML") {
+      if (node.id) { parts.unshift("#" + CSS.escape(node.id)); break; }
       let part = node.tagName.toLowerCase();
-      if (node.id) { part = "#" + CSS.escape(node.id); parts.unshift(part); break; }
       const classes = Array.from(node.classList || []).filter(isStableClass).slice(0, 2);
       if (classes.length) part += "." + classes.map((c) => CSS.escape(c)).join(".");
+      parts.unshift(part);
+      if (unique(parts.join(" > "))) return parts.join(" > ");
+      // Add a position only when the tag and classes are not enough on their own.
       const parent = node.parentElement;
       if (parent) {
         const sameTag = Array.from(parent.children).filter((s) => s.tagName === node.tagName);
-        if (sameTag.length > 1) part += ":nth-of-type(" + (sameTag.indexOf(node) + 1) + ")";
+        if (sameTag.length > 1) {
+          parts[0] = part + ":nth-of-type(" + (sameTag.indexOf(node) + 1) + ")";
+          if (unique(parts.join(" > "))) return parts.join(" > ");
+        }
       }
-      parts.unshift(part);
-      const candidate = parts.join(" > ");
-      if (unique(candidate)) return candidate;
       node = node.parentElement;
     }
     return parts.join(" > ");
@@ -318,41 +345,78 @@
     cursorEl.classList.toggle("yb-on", state.point);
   }
 
-  function openEditor(info, label, anchorRect) {
+  const RELOAD_MSG = "Pointfix was updated. Please reload this page (F5).";
+
+  // editId: when set, the editor changes or deletes that saved point instead of adding one.
+  function openEditor(info, label, anchorRect, editId) {
     closeEditor();
     state.editing = true;
     document.documentElement.classList.add("yb-editing");
     cursorEl.classList.remove("yb-on");
 
     editor = makeEl("div", "yb-editor yb-editor-in");
-    const title = makeEl("div", "yb-editor-title", "What should change?");
+    const title = makeEl("div", "yb-editor-title", editId ? "Edit this point" : "What should change?");
     const target = makeEl("div", "yb-editor-target", label);
     const input = makeEl("textarea", "yb-editor-input");
     input.placeholder = "Describe the change";
     input.rows = 2;
+    if (editId) input.value = info.instruction || "";
 
     const row = makeEl("div", "yb-editor-row");
     const spacer = makeEl("span", "yb-spacer");
     const cancelBtn = makeEl("button", "yb-btn yb-btn-ghost", "Cancel");
     cancelBtn.type = "button";
     cancelBtn.addEventListener("click", closeEditor);
-    const addBtn = makeEl("button", "yb-btn yb-btn-primary", "Add point");
+    const addBtn = makeEl("button", "yb-btn yb-btn-primary", editId ? "Save" : "Add point");
     addBtn.type = "button";
     addBtn.addEventListener("click", async () => {
       const text = input.value.trim();
       if (!text) { showToast("Type what should change"); input.focus(); return; }
-      info.instruction = text;
       try {
         const list = await loadAll();
-        list.push(info);
-        await saveAll(list);
-        closeEditor();
-        showToast("Point " + list.length + " added");
+        if (editId) {
+          const item = list.find((a) => a.id === editId);
+          if (item) item.instruction = text;
+          await saveAll(list);
+          closeEditor();
+          showToast("Point updated");
+        } else {
+          info.instruction = text;
+          list.push(info);
+          await saveAll(list);
+          closeEditor();
+          showToast("Point " + siteItems(list).length + " added");
+        }
       } catch (e) {
-        showToast("Pointfix was updated. Please reload this page (F5).", 4000);
+        showToast(RELOAD_MSG, 4000);
       }
     });
+
+    if (editId) {
+      const delBtn = makeEl("button", "yb-btn yb-btn-danger", "Delete");
+      delBtn.type = "button";
+      delBtn.addEventListener("click", async () => {
+        try {
+          const list = await loadAll();
+          await saveAll(list.filter((a) => a.id !== editId));
+          closeEditor();
+          showToast("Point deleted");
+        } catch (e) {
+          showToast(RELOAD_MSG, 4000);
+        }
+      });
+      row.append(delBtn);
+    }
     row.append(spacer, cancelBtn, addBtn);
+
+    // Ctrl+Enter (or Cmd+Enter) saves. Keys typed here are not passed on to the
+    // page, so its own keyboard shortcuts do not fire while writing.
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); addBtn.click(); }
+    });
+    ["keydown", "keypress", "keyup"].forEach((t) => editor.addEventListener(t, (ev) => {
+      if (ev.key !== "Escape") ev.stopPropagation();
+    }));
 
     editor.append(title, target, input, row);
     document.documentElement.appendChild(editor);
@@ -395,11 +459,11 @@
   async function render() {
     if (!alive()) return;
     ensureMounted();
-    const all = await loadAll();
+    const site = siteItems(await loadAll());
     const currentKey = pageKey();
-    pageCount = all.length;
+    pageCount = site.length;
     boxLayer.textContent = "";
-    all.forEach((a, i) => {
+    site.forEach((a, i) => {
       if (a.pageKey !== currentKey) return;
       let x = a.docX, y = a.docY, w = a.width, h = a.height;
       if (a.selector) {
@@ -419,7 +483,16 @@
       box.style.top = y + "px";
       box.style.width = w + "px";
       box.style.height = h + "px";
-      box.appendChild(makeEl("div", "yb-box-num", String(i + 1)));
+      // The number opens this point for editing or deleting.
+      const num = makeEl("div", "yb-box-num", String(i + 1));
+      num.title = "Edit or delete this point";
+      num.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const label = "Point " + (i + 1) + (a.innerText ? ' · "' + a.innerText + '"' : "");
+        openEditor({ ...a }, label, num.getBoundingClientRect(), a.id);
+      });
+      box.appendChild(num);
 
       const key = a.id || "i" + i;
       if (!shownIds.has(key)) {
@@ -439,9 +512,9 @@
   }
 
   async function copyPrompt() {
-    const all = await loadAll();
-    if (!all.length) { showToast("No points yet"); return; }
-    const text = buildPrompt(all);
+    const site = siteItems(await loadAll());
+    if (!site.length) { showToast("No points on this site yet"); return; }
+    const text = buildPrompt(site);
     let ok = false;
     try {
       await navigator.clipboard.writeText(text);
@@ -452,11 +525,14 @@
     showToast(ok ? "Prompt copied. Paste it into your AI agent." : "Copy failed");
   }
 
+  // Deletes the points of this site only; other sites keep theirs.
   async function deleteAll() {
     const all = await loadAll();
-    if (!all.length) { showToast("No points yet"); return; }
-    await saveAll([]);
-    showToast("Deleted " + all.length + (all.length === 1 ? " point" : " points"));
+    const rest = all.filter((a) => originOf(a) !== location.origin);
+    const removed = all.length - rest.length;
+    if (!removed) { showToast("No points on this site yet"); return; }
+    await saveAll(rest);
+    showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
   }
 
   // ---------- point mode ----------
@@ -512,24 +588,29 @@
     if (!cur.raf) cur.raf = requestAnimationFrame(tickCursor);
   }, { capture: true, passive: true });
 
-  document.addEventListener("mousedown", (ev) => {
-    if (state.point && !isOwnUI(ev.target)) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      cursorEl.classList.add("yb-press");
-    }
-  }, true);
+  // In Point mode the page must not react to the click at all: menus that open on
+  // pointerdown, drags, double-clicks and so on. Listen on window in the capture
+  // phase so this runs before the page's own handlers.
+  function swallow(ev) {
+    if (!state.point || isOwnUI(ev.target)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (ev.type === "pointerdown" || ev.type === "mousedown") cursorEl.classList.add("yb-press");
+  }
+  ["pointerdown", "mousedown", "pointerup", "mouseup", "dblclick", "auxclick"].forEach((t) =>
+    window.addEventListener(t, swallow, true));
 
-  document.addEventListener("mouseup", () => {
+  window.addEventListener("pointerup", () => {
     cursorEl.classList.remove("yb-press");
   }, true);
 
-  document.addEventListener("click", (ev) => {
-    if (!state.point || state.editing) return;
+  window.addEventListener("click", (ev) => {
+    if (!state.point) return;
     const el = ev.target;
     if (!el || el.nodeType !== 1 || isOwnUI(el)) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (state.editing) return;
     const rect = el.getBoundingClientRect();
     const info = captureInfo(el);
     hideOverlay();
