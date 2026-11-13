@@ -123,7 +123,10 @@
       const parent = node.parentElement;
       if (parent) {
         const sameTag = Array.from(parent.children).filter((s) => s.tagName === node.tagName);
-        if (sameTag.length > 1) {
+        // Only siblings that the tag + classes cannot tell apart need a position.
+        let alike = sameTag.length;
+        try { alike = parent.querySelectorAll(":scope > " + part).length; } catch (e) { /* keep */ }
+        if (alike > 1) {
           parts[0] = part + ":nth-of-type(" + (sameTag.indexOf(node) + 1) + ")";
           if (unique(parts.join(" > "))) return parts.join(" > ");
         }
@@ -131,6 +134,53 @@
       node = node.parentElement;
     }
     return parts.join(" > ");
+  }
+
+  // ---------- current styles ----------
+
+  // "rgb(29, 155, 240)" -> "#1d9bf0"; keeps rgba() when it is see-through; "" when invisible.
+  function cssColor(v) {
+    const m = String(v).match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+%?))?\s*\)/);
+    if (!m) return v || "";
+    let a = m[4] == null ? 1 : parseFloat(m[4]) / (String(m[4]).endsWith("%") ? 100 : 1);
+    if (a === 0) return "";
+    const hex = "#" + [m[1], m[2], m[3]].map((n) => (+n).toString(16).padStart(2, "0")).join("");
+    return a < 1 ? "rgba(" + m[1] + ", " + m[2] + ", " + m[3] + ", " + Math.round(a * 100) / 100 + ")" : hex;
+  }
+
+  // Four sides -> the short CSS form ("10px 18px"), or "" when all are 0.
+  function fourSides(t, r, b, l) {
+    if ([t, r, b, l].every((v) => v === "0px")) return "";
+    if (t === r && r === b && b === l) return t;
+    if (t === b && r === l) return t + " " + r;
+    return [t, r, b, l].join(" ");
+  }
+
+  // A short line of the values the AI needs to change "bigger", "rounder" and so on.
+  function currentStyles(el) {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    const out = [Math.round(r.width) + "×" + Math.round(r.height) + "px"];
+    out.push("font " + cs.fontSize + " / " + cs.fontWeight);
+    const color = cssColor(cs.color);
+    if (color) out.push("color " + color);
+    const bg = cssColor(cs.backgroundColor);
+    if (bg) out.push("background " + bg);
+    if (cs.backgroundImage && cs.backgroundImage !== "none") out.push("background-image " + (cs.backgroundImage.includes("gradient") ? "gradient" : "image"));
+    const pad = fourSides(cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft);
+    if (pad) out.push("padding " + pad);
+    const mar = fourSides(cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft);
+    if (mar) out.push("margin " + mar);
+    if (cs.borderTopStyle !== "none" && cs.borderTopWidth !== "0px") {
+      out.push("border " + cs.borderTopWidth + " " + cs.borderTopStyle + " " + (cssColor(cs.borderTopColor) || "transparent"));
+    }
+    const rad = fourSides(cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomRightRadius, cs.borderBottomLeftRadius);
+    if (rad) out.push("radius " + rad);
+    if (cs.display === "flex" || cs.display === "grid" || cs.display === "inline-flex" || cs.display === "inline-grid") {
+      out.push(cs.display + (cs.gap && cs.gap !== "normal" && cs.gap !== "0px" ? " gap " + cs.gap : ""));
+    }
+    if (cs.opacity !== "1") out.push("opacity " + cs.opacity);
+    return out.join("; ");
   }
 
   // Asks page-probe.js (page world) for the component and source location of an
@@ -213,6 +263,7 @@
       framework: (probe && probe.framework) || "",
       component: (probe && probe.component) || "",
       source: sourceText(probe),
+      current: currentStyles(el),
       pageKey: pageKey(),
       url: location.href,
       selector: buildSelector(el),
@@ -245,6 +296,8 @@
       else if (a.component) lines.push("**Component**: " + a.component);
       lines.push("**TagName**: " + a.tagName);
       if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
+      // The values now, so "bigger" or "rounder" has something to start from.
+      if (a.current) lines.push("**Current**: " + a.current);
       lines.push("**Instruction**: " + a.instruction);
       lines.push("");
     });

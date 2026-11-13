@@ -34,6 +34,7 @@ After the changes, briefly tell me what you changed.
 **Source**: `src/components/Hero.tsx:24:9` (Hero)
 **TagName**: BUTTON
 **Inner Content**: Sign up
+**Current**: 120×40px; font 15px / 700; color #ffffff; background #1d9bf0; padding 10px 18px; radius 999px
 **Instruction**: make it bigger and blue
 
 ## Annotation 2
@@ -67,7 +68,8 @@ After the changes, briefly tell me what you changed.
 - ✏️ **1つずつ編集・削除** — 番号をクリックします。
 - ↕️ **親要素・子要素への切り替え** — 指さし中に `↑` を押すと、枠の付いた要素の親（例：1行ではなくカード全体）に切り替わります。`↓` で戻ります。マウスを動かすと、カーソルの下の要素からやり直します。
 - 📍 **ソースの場所** — 開発サーバーで動かしているときは、要素がどのファイルの何行目から来ているか（例：`src/App.jsx:24:9 (App)`）をプロンプトに入れます。AI がすぐにコードを見つけられます。React 18/19 と Vue に対応し、Svelte、Angular（コンポーネント名のみ）、react-dev-inspector の情報も読みます。本番用のビルドにはこの情報がないため、そのときは入りません。
-- 📋 **短いプロンプト** — URL、CSSセレクタ、ソースの場所、タグ名、文字、指示だけを入れます。
+- 🎨 **今の値** — 要素の今の大きさ、文字、色、余白、枠線、角の丸みを入れます。「大きく」「もっと丸く」と書いたときに、AI が今の値から考えられます。
+- 📋 **短いプロンプト** — URL、CSSセレクタ、ソースの場所、タグ名、文字、今の値、指示だけを入れます。
 - 🔒 **完全ローカル動作** — データを外部サーバーに送りません。
 
 ### 動き
