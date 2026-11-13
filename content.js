@@ -123,10 +123,86 @@
     return parts.join(" > ");
   }
 
+  // Asks page-probe.js (page world) for the component and source location of an
+  // element. The event is handled synchronously, so the answer is there right after.
+  function probeSource(el) {
+    try {
+      el.setAttribute("data-yb-probe", "1");
+      document.dispatchEvent(new CustomEvent("pointfix:probe"));
+      const raw = el.getAttribute("data-yb-source");
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    } finally {
+      el.removeAttribute("data-yb-probe");
+      el.removeAttribute("data-yb-source");
+    }
+  }
+
+  function sourceText(p) {
+    if (!p || !p.file) return "";
+    if (p.fromStack) return p.file;   // the real line is filled in by resolveJsxLine
+    return p.file + (p.line ? ":" + p.line : "") + (p.line && p.column ? ":" + p.column : "");
+  }
+
+  // React 19 only gives a stack position inside the transformed module. In dev
+  // builds every jsxDEV(...) call still carries { fileName, lineNumber, columnNumber }
+  // as an argument, so read the module and take the source object of that call.
+  async function resolveJsxLine(url, line, column) {
+    const res = await fetch(url, { cache: "force-cache" });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const lines = text.split("\n");
+    if (line > lines.length) return null;
+    let offset = column - 1;
+    for (let i = 0; i < line - 1; i++) offset += lines[i].length + 1;
+    const open = text.indexOf("(", offset);
+    if (open < 0 || open - offset > 40) return null;
+    // Find the matching ")" of this call, skipping strings.
+    let depth = 0, i = open, quote = null;
+    for (; i < text.length; i++) {
+      const ch = text[i];
+      if (quote) {
+        if (ch === "\\") { i++; continue; }
+        if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") { quote = ch; continue; }
+      if (ch === "(") depth++;
+      else if (ch === ")" && --depth === 0) break;
+    }
+    // Children come first in the call, so the last source object is this element's.
+    const all = [...text.slice(open, i).matchAll(/lineNumber:\s*(\d+),\s*columnNumber:\s*(\d+)/g)];
+    if (!all.length) return null;
+    const m = all[all.length - 1];
+    return { line: +m[1], column: +m[2] };
+  }
+
+  // Source lines still being looked up, by point id.
+  const pendingSource = new Map();
+
+  async function updateStoredSource(id, source) {
+    try {
+      const list = await loadAll();
+      const item = list.find((a) => a.id === id);
+      if (item && item.source !== source) { item.source = source; await saveAll(list); }
+    } catch (e) { /* the point may not be saved yet, or the page is stale */ }
+  }
+
   function captureInfo(el) {
     const rect = el.getBoundingClientRect();
+    const probe = probeSource(el);
+    const id = "yb" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    if (probe && probe.fromStack && probe.url) {
+      pendingSource.set(id, resolveJsxLine(probe.url, probe.line, probe.column)
+        .then((pos) => (pos ? probe.file + ":" + pos.line + ":" + pos.column : null))
+        .catch(() => null));
+    }
     return {
-      id: "yb" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      id,
+      framework: (probe && probe.framework) || "",
+      component: (probe && probe.component) || "",
+      source: sourceText(probe),
       pageKey: pageKey(),
       url: location.href,
       selector: buildSelector(el),
@@ -154,6 +230,9 @@
       lines.push("## Annotation " + (i + 1));
       lines.push("**URL**: " + a.url);
       lines.push("**Target**: `" + a.selector + "`");
+      // Where the element comes from in the code, when the dev build tells us.
+      if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+      else if (a.component) lines.push("**Component**: " + a.component);
       lines.push("**TagName**: " + a.tagName);
       if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
       lines.push("**Instruction**: " + a.instruction);
@@ -337,9 +416,13 @@
   // ---------- editor ----------
 
   let editor = null;
+  let editorTarget = null;   // the label line, so a late source line can be shown
+  let editorInfoId = null;
 
   function closeEditor() {
     if (editor) { editor.remove(); editor = null; }
+    editorTarget = null;
+    editorInfoId = null;
     state.editing = false;
     document.documentElement.classList.remove("yb-editing");
     cursorEl.classList.toggle("yb-on", state.point);
@@ -357,6 +440,8 @@
     editor = makeEl("div", "yb-editor yb-editor-in");
     const title = makeEl("div", "yb-editor-title", editId ? "Edit this point" : "What should change?");
     const target = makeEl("div", "yb-editor-target", label);
+    editorTarget = target;
+    editorInfoId = info.id;
     const input = makeEl("textarea", "yb-editor-input");
     input.placeholder = "Describe the change";
     input.rows = 2;
@@ -615,7 +700,23 @@
     const info = captureInfo(el);
     hideOverlay();
     ripple(ev.clientX, ev.clientY);
-    openEditor(info, labelFor(el), rect);
+    const base = labelFor(el);
+    const withWhere = () => {
+      const where = info.source || info.component;
+      return base + (where ? "\n" + (info.component && info.source ? info.component + " · " : "") + where : "");
+    };
+    openEditor(info, withWhere(), rect);
+    // React 19: the exact line arrives a moment later; show it and keep it.
+    const pending = pendingSource.get(info.id);
+    if (pending) {
+      pending.then((src) => {
+        pendingSource.delete(info.id);
+        if (!src) return;
+        info.source = src;
+        if (editorTarget && editorInfoId === info.id) editorTarget.textContent = withWhere();
+        updateStoredSource(info.id, src);
+      });
+    }
   }, true);
 
   document.addEventListener("keydown", (ev) => {

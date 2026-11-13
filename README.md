@@ -27,6 +27,7 @@ After the changes, briefly tell me what you changed.
 ## Annotation 1
 **URL**: https://example.com/
 **Target**: `button#cta`
+**Source**: `src/components/Hero.tsx:24:9` (Hero)
 **TagName**: BUTTON
 **Inner Content**: Sign up
 **Instruction**: make it bigger and blue
@@ -59,7 +60,8 @@ After the changes, briefly tell me what you changed.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
 - **Edit or delete one point** — click its number.
-- **Short prompt** — the URL, a CSS selector, the tag name, the text, and your instruction. Nothing else.
+- **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9 (App)`), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
+- **Short prompt** — the URL, a CSS selector, the source, the tag name, the text, and your instruction. Nothing else.
 - **Runs locally** — nothing is sent to any server.
 
 ### Motion
@@ -127,6 +129,7 @@ pointfix/
 ├── manifest.json     Manifest V3
 ├── background.js     Service worker: toolbar icon, shortcuts, bar visibility
 ├── content.js        Point mode, the bar, the boxes and the prompt
+├── page-probe.js     Runs in the page to read the component and source location
 ├── content.css       Styles of the in-page UI
 ├── icons/            Extension icons (PNG for Chrome, SVG source)
 ├── docs/             Images used in this README

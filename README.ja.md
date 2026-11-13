@@ -31,6 +31,7 @@ After the changes, briefly tell me what you changed.
 ## Annotation 1
 **URL**: https://example.com/
 **Target**: `button#cta`
+**Source**: `src/components/Hero.tsx:24:9` (Hero)
 **TagName**: BUTTON
 **Inner Content**: Sign up
 **Instruction**: make it bigger and blue
@@ -63,7 +64,8 @@ After the changes, briefly tell me what you changed.
 - 🔗 **複数ページをまとめて指示** — 1ページ内だけでなく、単一ページのサイトにも対応しています。それぞれの指示に URL が入ります。
 - 🗂 **点はサイトごと** — 点の数、Copy prompt、Delete all は、開いているサイトの点だけを使います。別のプロジェクトの点がプロンプトに混ざることはありません。
 - ✏️ **1つずつ編集・削除** — 番号をクリックします。
-- 📋 **短いプロンプト** — URL、CSSセレクタ、タグ名、文字、指示だけを入れます。
+- 📍 **ソースの場所** — 開発サーバーで動かしているときは、要素がどのファイルの何行目から来ているか（例：`src/App.jsx:24:9 (App)`）をプロンプトに入れます。AI がすぐにコードを見つけられます。React 18/19 と Vue に対応し、Svelte、Angular（コンポーネント名のみ）、react-dev-inspector の情報も読みます。本番用のビルドにはこの情報がないため、そのときは入りません。
+- 📋 **短いプロンプト** — URL、CSSセレクタ、ソースの場所、タグ名、文字、指示だけを入れます。
 - 🔒 **完全ローカル動作** — データを外部サーバーに送りません。
 
 ### 動き
@@ -131,6 +133,7 @@ pointfix/
 ├── manifest.json     Manifest V3
 ├── background.js     サービスワーカー: ツールバーのアイコン、ショートカット、バーの表示切り替え
 ├── content.js        指さしモード、バー、枠、プロンプト
+├── page-probe.js     ページ側で動き、コンポーネント名とソースの場所を読む
 ├── content.css       ページ内の UI のスタイル
 ├── icons/            拡張機能のアイコン（Chrome 用の PNG と、元になる SVG）
 ├── docs/             この README で使う画像

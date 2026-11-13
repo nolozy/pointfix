@@ -29,6 +29,23 @@
         "https://*/*"
       ],
       "js": [
+        "page-probe.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "exclude_matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ]
+    },
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
         "content.js"
       ],
       "css": [
