@@ -47,10 +47,28 @@ chrome.commands.onCommand.addListener((command) => {
 
 // The content script asks for a picture of the visible part of its tab
 // (with the numbered boxes and notes drawn on the page).
+// captureVisibleTab takes whatever tab is in front in the window, so only
+// capture when the asking tab is that tab; never another page.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== "YB_CAPTURE" || !sender.tab) return;
-  chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: "png" })
-    .then((dataUrl) => sendResponse({ dataUrl }))
-    .catch((e) => sendResponse({ error: String(e && e.message || e) }));
+  (async () => {
+    try {
+      const [front] = await chrome.tabs.query({ active: true, windowId: sender.tab.windowId });
+      if (!front || front.id !== sender.tab.id) {
+        sendResponse({ error: "not-front" });
+        return;
+      }
+      const dataUrl = await chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: "png" });
+      // Check again: the user may have switched tabs while the picture was taken.
+      const [after] = await chrome.tabs.query({ active: true, windowId: sender.tab.windowId });
+      if (!after || after.id !== sender.tab.id) {
+        sendResponse({ error: "not-front" });
+        return;
+      }
+      sendResponse({ dataUrl });
+    } catch (e) {
+      sendResponse({ error: String((e && e.message) || e) });
+    }
+  })();
   return true;   // answer asynchronously
 });

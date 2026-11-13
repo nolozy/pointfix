@@ -707,12 +707,26 @@
       showToast("Images can be copied on https and localhost pages only", 3500);
       return;
     }
+    if (document.visibilityState !== "visible") {
+      showToast("Bring this tab to the front, then try again", 3500);
+      return;
+    }
     const root = document.documentElement;
     root.classList.add("yb-capturing");
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // Wait for the notes to be painted (rAF), with a timer in case frames are paused.
+    await new Promise((r) => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; r(); } };
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+      setTimeout(finish, 150);
+    });
     let res = null;
     try { res = await chrome.runtime.sendMessage({ type: "YB_CAPTURE" }); } catch (e) { res = null; }
     root.classList.remove("yb-capturing");
+    if (res && res.error === "not-front") {
+      showToast("Bring this tab to the front, then try again", 3500);
+      return;
+    }
     if (!res || !res.dataUrl) { showToast("Could not take the screenshot", 3000); return; }
     try {
       const blob = await (await fetch(res.dataUrl)).blob();
