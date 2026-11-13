@@ -396,10 +396,12 @@
   const countEl = makeEl("span", "yb-bar-count", "No points");
   const pointBtn = barButton("Start", "Alt+S", "yb-bar-primary");
   const copyBtn = barButton("Copy prompt", "Alt+C");
+  const imageBtn = barButton("Copy image", "Alt+Shift+C");
   const deleteBtn = barButton("Delete all", "Alt+X");
-  bar.append(countEl, pointBtn, copyBtn, deleteBtn);
+  bar.append(countEl, pointBtn, copyBtn, imageBtn, deleteBtn);
   pointBtn.addEventListener("click", () => setPoint(!state.point));
   copyBtn.addEventListener("click", copyPrompt);
+  imageBtn.addEventListener("click", copyImage);
   deleteBtn.addEventListener("click", deleteAll);
 
   function updateBar() {
@@ -407,6 +409,7 @@
       ? pageCount + (pageCount === 1 ? " point" : " points")
       : "No points";
     copyBtn.disabled = pageCount === 0;
+    imageBtn.disabled = pageCount === 0;
     deleteBtn.disabled = pageCount === 0;
     pointBtn.firstChild.textContent = state.point ? "Stop" : "Start";
     pointBtn.classList.toggle("yb-bar-on", state.point);
@@ -659,6 +662,8 @@
         openEditor({ ...a }, label, num.getBoundingClientRect(), a.id);
       });
       box.appendChild(num);
+      // The instruction, shown next to the box only while a screenshot is taken.
+      box.appendChild(makeEl("div", "yb-box-note", (i + 1) + ". " + a.instruction));
 
       const key = a.id || "i" + i;
       if (!shownIds.has(key)) {
@@ -689,6 +694,34 @@
       ok = fallbackCopy(text);
     }
     showToast(ok ? "Prompt copied. Paste it into your AI agent." : "Copy failed");
+  }
+
+  // Copies a PNG of the visible part of the page with the numbered boxes and
+  // each instruction drawn next to its box. The bar, cursor and editor are
+  // hidden while the picture is taken.
+  async function copyImage() {
+    let site;
+    try { site = siteItems(await loadAll()); } catch (e) { showToast(RELOAD_MSG, 4000); return; }
+    if (!site.length) { showToast("No points on this site yet"); return; }
+    if (!window.isSecureContext || !navigator.clipboard || !window.ClipboardItem) {
+      showToast("Images can be copied on https and localhost pages only", 3500);
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add("yb-capturing");
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    let res = null;
+    try { res = await chrome.runtime.sendMessage({ type: "YB_CAPTURE" }); } catch (e) { res = null; }
+    root.classList.remove("yb-capturing");
+    if (!res || !res.dataUrl) { showToast("Could not take the screenshot", 3000); return; }
+    try {
+      const blob = await (await fetch(res.dataUrl)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      const shown = site.filter((a) => a.pageKey === pageKey()).length;
+      showToast("Image copied (" + shown + (shown === 1 ? " point" : " points") + " on screen). Paste it into your AI agent.", 3000);
+    } catch (e) {
+      showToast("Copy failed. Click the page once and try again.", 3500);
+    }
   }
 
   // Deletes the points of this site only; other sites keep theirs.
@@ -991,6 +1024,7 @@
     if (!message || typeof message.type !== "string") return;
     if (message.type === "YB_TOGGLE_POINT") setPoint(!state.point);
     else if (message.type === "YB_COPY_PROMPT") copyPrompt();
+    else if (message.type === "YB_COPY_IMAGE") copyImage();
     else if (message.type === "YB_DELETE_ALL") deleteAll();
   });
 

@@ -41,5 +41,16 @@ chrome.storage.local.get(BAR_KEY).then((data) => setTitleFor(data[BAR_KEY] !== f
 chrome.commands.onCommand.addListener((command) => {
   if (command === "toggle-point") sendToActiveTab({ type: "YB_TOGGLE_POINT" });
   else if (command === "copy-prompt") sendToActiveTab({ type: "YB_COPY_PROMPT" });
+  else if (command === "copy-image") sendToActiveTab({ type: "YB_COPY_IMAGE" });
   else if (command === "delete-all") sendToActiveTab({ type: "YB_DELETE_ALL" });
+});
+
+// The content script asks for a picture of the visible part of its tab
+// (with the numbered boxes and notes drawn on the page).
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== "YB_CAPTURE" || !sender.tab) return;
+  chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: "png" })
+    .then((dataUrl) => sendResponse({ dataUrl }))
+    .catch((e) => sendResponse({ error: String(e && e.message || e) }));
+  return true;   // answer asynchronously
 });

@@ -64,8 +64,7 @@
     "storage"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "<all_urls>"
   ],
   "commands": {
     "toggle-point": {
@@ -79,6 +78,12 @@
         "default": "Alt+C"
       },
       "description": "Copy the prompt"
+    },
+    "copy-image": {
+      "suggested_key": {
+        "default": "Alt+Shift+C"
+      },
+      "description": "Copy a screenshot with the points"
     },
     "delete-all": {
       "suggested_key": {

@@ -373,3 +373,33 @@ html.yb-point [data-yb-ui], html.yb-point [data-yb-ui] * {
   border-color: #ec4899;
   background: rgba(236, 72, 153, 0.06);
 }
+
+/* Screenshot: hide our controls, show each instruction next to its box. */
+.yb-box-note {
+  display: none;
+  position: absolute;
+  left: -2px;
+  top: calc(100% + 6px);
+  max-width: 320px;
+  width: max-content;
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: #111827;
+  border: 1px solid #f59e0b;
+  color: #fff;
+  font: 600 13px/1.4 -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  white-space: normal;
+}
+
+html.yb-capturing .yb-box-note { display: block; }
+
+html.yb-capturing .yb-bar,
+html.yb-capturing .yb-toast,
+html.yb-capturing .yb-cursor,
+html.yb-capturing .yb-overlay,
+html.yb-capturing .yb-editor,
+html.yb-capturing .yb-ripple,
+html.yb-capturing .yb-area-draft {
+  visibility: hidden !important;
+}
