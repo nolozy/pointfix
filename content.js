@@ -90,8 +90,18 @@
     try { return document.querySelectorAll(sel).length === 1; } catch (e) { return false; }
   }
 
+  // Ids added at run time by other extensions or UI libraries change on every load
+  // and mean nothing in the source code, so they are not used in selectors.
+  function isStableId(id) {
+    if (!id) return false;
+    if (/^generated-id-/i.test(id)) return false;          // added by other browser extensions
+    if (/^(radix-|headlessui-|react-aria|mui-|:r|«r)/.test(id)) return false;  // UI library / useId
+    if (/\d{6,}/.test(id)) return false;                    // timestamps and counters
+    return true;
+  }
+
   function buildSelector(el) {
-    if (el.id && unique("#" + CSS.escape(el.id))) return "#" + CSS.escape(el.id);
+    if (isStableId(el.id) && unique("#" + CSS.escape(el.id))) return "#" + CSS.escape(el.id);
     const attrs = ["data-testid", "data-test", "data-cy", "aria-label", "name"];
     for (const a of attrs) {
       const v = el.getAttribute && el.getAttribute(a);
@@ -103,7 +113,7 @@
     const parts = [];
     let node = el;
     while (node && node.nodeType === 1 && node.tagName !== "HTML") {
-      if (node.id) { parts.unshift("#" + CSS.escape(node.id)); break; }
+      if (isStableId(node.id)) { parts.unshift("#" + CSS.escape(node.id)); break; }
       let part = node.tagName.toLowerCase();
       const classes = Array.from(node.classList || []).filter(isStableClass).slice(0, 2);
       if (classes.length) part += "." + classes.map((c) => CSS.escape(c)).join(".");
