@@ -97,7 +97,11 @@
       const loc = n.__svelte_meta && n.__svelte_meta.loc;
       if (loc && loc.file) {
         const file = cleanFile(loc.file);
-        return { framework: "Svelte", component: file.split("/").pop().replace(/\.svelte$/, ""), file, line: loc.line, column: loc.column };
+        // Svelte 4 sets 0-based line/column alongside loc.char; Svelte 5 sets 1-based line and 0-based column (no loc.char).
+        const isSvelte4 = typeof loc.char === "number";
+        const line = typeof loc.line === "number" ? (isSvelte4 ? loc.line + 1 : loc.line) : undefined;
+        const column = typeof loc.column === "number" ? loc.column + 1 : undefined;
+        return { framework: "Svelte", component: file.split("/").pop().replace(/\.svelte$/, ""), file, line, column };
       }
     }
     return null;
@@ -106,8 +110,10 @@
   function angularInfo(el) {
     const ng = window.ng;
     if (!ng || typeof ng.getOwningComponent !== "function") return null;
-    const c = ng.getOwningComponent(el);
-    return c && c.constructor ? { framework: "Angular", component: c.constructor.name } : null;
+    // Prefer the component hosted on el itself (e.g. <app-badge>) before falling back to the owning parent.
+    const c = (typeof ng.getComponent === "function" && ng.getComponent(el)) || ng.getOwningComponent(el);
+    const name = c && c.constructor && c.constructor.name ? c.constructor.name.replace(/^_/, "") : "";
+    return name ? { framework: "Angular", component: name } : null;
   }
 
   // Build tools that write the source into the markup (react-dev-inspector and similar).
