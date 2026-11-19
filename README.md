@@ -67,7 +67,7 @@ After the changes, briefly tell me what you changed.
 - **Screenshot with the points** — **Copy image** (or `Alt+Shift+C`) copies a picture of the visible part of the page with the numbered boxes and each instruction written next to its box. Paste it into an agent that reads images, together with the prompt. Works on https and localhost pages (the browser only allows image copying there).
 - **Areas** — while pointing, drag to draw a rectangle (pink). Use it for a whole region or for empty space ("add a button here"). The prompt gets the area's size and place, the element around it and the elements inside it. `Esc` cancels a drag.
 - **Parent and child** — while pointing, press `↑` to pick the parent of the highlighted element (for example the whole card instead of one line) and `↓` to go back. Moving the mouse starts again from the element under it.
-- **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9 (App)`), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
+- **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9` (App)), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
 - **Current values** — the size, font, colors, padding, margin, border and radius the element has now, so "bigger" or "rounder" has a starting point.
 - **Short prompt** — the URL, a CSS selector, the source, the tag name, the text, the current values and your instruction. Nothing else.
 - **Runs locally** — nothing is sent to any server.
@@ -119,12 +119,13 @@ Click the puzzle-piece icon 🧩 in Chrome's toolbar and pin **Pointfix** so the
 ## Limitations
 
 - **Pages Chrome protects:** `chrome://` pages, the Chrome Web Store and Chrome's PDF viewer cannot be used.
+- **AI chat pages:** Pointfix does not run on Claude, ChatGPT or Gemini (`claude.ai`, `chatgpt.com`, `chat.openai.com`, `gemini.google.com`) so the bar does not get in the way while pasting prompts.
 - **Local files** (`file://`) need "Allow access to file URLs" turned on in the extension's details.
 - **Single-page sites** keep the same points, but a point is drawn only when its element is on the current page.
 
 ## Privacy
 
-Pointfix runs entirely in your browser. It does not send page content or your instructions anywhere. Points are stored in the browser's local storage only. A screenshot is taken only when you press Copy image, and goes only to your clipboard. Taking it needs the `<all_urls>` permission; Pointfix itself still only runs on http and https pages.
+Pointfix runs entirely in your browser. It does not send page content or your instructions anywhere. Points are stored in the browser's local storage only. A screenshot of the active tab is taken only when you press Copy image, and goes only to your clipboard. Taking it needs the `<all_urls>` permission; Pointfix itself still only runs on http and https pages.
 
 ## Background
 
@@ -135,8 +136,8 @@ The idea was inspired by UISelector2AI, which turns a selected element into a pr
 ```
 pointfix/
 ├── manifest.json     Manifest V3
-├── background.js     Service worker: toolbar icon, shortcuts, bar visibility
-├── content.js        Point mode, the bar, the boxes and the prompt
+├── background.js     Service worker: toolbar icon, shortcuts, bar visibility, screenshots
+├── content.js        Point mode, the bar, the boxes, areas, screenshots and the prompt
 ├── page-probe.js     Runs in the page to read the component and source location
 ├── content.css       Styles of the in-page UI
 ├── icons/            Extension icons (PNG for Chrome, SVG source)
