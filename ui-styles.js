@@ -158,7 +158,7 @@ button {
   100% { transform: scale(1); }
 }
 
-/* Bottom-right bar with Start, Copy and Delete. */
+/* Bottom-right bar: compact, neutral monochrome (shadcn/ui & web-pen-red style). */
 .yb-bar {
   position: fixed;
   right: 16px;
@@ -166,23 +166,31 @@ button {
   z-index: 2147483003;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
-  color: #f9fafb;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(24, 24, 27, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.2);
+  font: 500 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #fafafa;
   pointer-events: auto;
   cursor: default;
+  user-select: none;
 }
 
 .yb-bar-count {
-  color: #9ca3af;
-  font-size: 12px;
-  padding: 0 6px;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 8px 0 4px;
+  margin-right: 2px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 18px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .yb-bar-hidden { display: none !important; }
@@ -191,11 +199,27 @@ button {
 .yb-grip {
   display: flex;
   align-items: center;
-  padding: 0 4px 0 2px;
-  color: #6b7390;
+  justify-content: center;
+  width: 18px;
+  height: 28px;
+  padding: 0;
+  color: #71717a;
+  border-radius: 6px;
   cursor: grab;
   touch-action: none;
   user-select: none;
+  transition: color 0.14s ease-out, background 0.14s ease-out;
+}
+
+.yb-grip svg {
+  width: 10px;
+  height: 16px;
+  display: block;
+}
+
+.yb-grip:hover {
+  color: #d4d4d8;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .yb-grip:active { cursor: grabbing; }
@@ -203,45 +227,69 @@ button {
 .yb-bar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #1f2937;
-  color: #e5e7eb;
-  border: 1px solid #4b5563;
-  border-radius: 8px;
-  padding: 9px 14px;
-  min-height: 36px;
-  font: 14px/1.4 -apple-system, "Segoe UI", sans-serif;
+  gap: 5px;
+  background: transparent;
+  color: #e4e4e7;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 9px;
+  height: 28px;
+  min-height: 28px;
+  font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 0.12s ease-out, background 0.15s ease-out, filter 0.15s ease-out;
+  transition: background 0.14s ease-out, color 0.14s ease-out, transform 0.1s ease-out;
 }
 
-.yb-bar-btn:hover { filter: brightness(1.15); }
-.yb-bar-btn:active { transform: scale(0.96); }
-.yb-bar-btn:disabled { opacity: 0.4; cursor: default; filter: none; }
+.yb-bar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fafafa;
+}
+.yb-bar-btn:active:not(:disabled) { transform: scale(0.97); }
+.yb-bar-btn:disabled { opacity: 0.35; cursor: default; }
 
 .yb-bar-primary {
-  background: linear-gradient(135deg, #6366f1, #ec4899);
+  background: #fafafa;
   border-color: transparent;
-  color: #fff;
-  font-weight: 700;
-  min-width: 96px;
+  color: #09090b;
+  font-weight: 600;
+  min-width: 78px;
   justify-content: center;
 }
 
-/* While Point mode is on, the Stop button is red and easy to see. */
+.yb-bar-primary:hover:not(:disabled) {
+  background: #e4e4e7;
+  color: #09090b;
+}
+
+/* While Point mode is on, the Stop button turns solid red. */
 .yb-bar-on {
   background: #dc2626 !important;
-  border-color: #f87171 !important;
-  color: #fff !important;
+  border-color: transparent !important;
+  color: #fafafa !important;
+}
+
+.yb-bar-on:hover:not(:disabled) {
+  background: #b91c1c !important;
 }
 
 .yb-kbd {
-  font: 11px/1 -apple-system, "Segoe UI", sans-serif;
-  opacity: 0.7;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
   border-radius: 4px;
   padding: 2px 4px;
+}
+
+.yb-bar-primary .yb-kbd {
+  color: rgba(9, 9, 11, 0.6);
+  background: rgba(9, 9, 11, 0.08);
+}
+
+.yb-bar-on .yb-kbd {
+  color: rgba(250, 250, 250, 0.85);
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .yb-editor {
