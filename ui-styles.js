@@ -298,36 +298,39 @@ button {
   z-index: 2147483005;
   width: 340px;
   box-sizing: border-box;
-  background: #111827;
-  color: #f9fafb;
-  border: 1px solid #374151;
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  padding: 14px;
-  font: 13px/1.5 -apple-system, "Segoe UI", sans-serif;
+  background: rgba(24, 24, 27, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fafafa;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42), 0 1px 2px rgba(0, 0, 0, 0.25);
+  padding: 12px;
+  font: 12.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   pointer-events: auto;
   cursor: default;
 }
 
 .yb-editor-in {
-  animation: yb-editor-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: yb-editor-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes yb-editor-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  from { opacity: 0; transform: translateY(5px) scale(0.98); }
   to   { opacity: 1; transform: none; }
 }
 
 .yb-editor-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fafafa;
+  margin-bottom: 3px;
 }
 
 .yb-editor-target {
-  color: #a5b4fc;
-  font-size: 12px;
-  margin-bottom: 10px;
+  color: #a1a1aa;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  margin-bottom: 9px;
   word-break: break-all;
   white-space: pre-line;
 }
@@ -335,54 +338,79 @@ button {
 .yb-editor-input {
   width: 100%;
   box-sizing: border-box;
-  background: #1f2937;
-  color: #f9fafb;
-  border: 1px solid #4b5563;
-  border-radius: 8px;
-  padding: 8px;
-  font: 13px/1.5 inherit;
+  background: #09090b;
+  color: #fafafa;
+  border: 1px solid #27272a;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   resize: vertical;
   margin-bottom: 10px;
   cursor: text;
+  transition: border-color 0.14s ease-out;
+}
+
+.yb-editor-input::placeholder {
+  color: #71717a;
+}
+
+.yb-editor-input:focus {
+  outline: none;
+  border-color: #52525b;
 }
 
 .yb-editor-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .yb-spacer { flex: 1; }
 
 .yb-btn {
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 13px;
-  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 0 11px;
+  height: 28px;
+  font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: transform 0.12s ease-out, filter 0.15s ease-out;
+  transition: background 0.14s ease-out, color 0.14s ease-out, border-color 0.14s ease-out, transform 0.1s ease-out;
 }
 
-.yb-btn:hover { filter: brightness(1.12); }
-.yb-btn:active { transform: scale(0.96); }
+.yb-btn:active { transform: scale(0.97); }
 
 .yb-btn-ghost {
-  background: none;
-  color: #9ca3af;
-  border-color: #4b5563;
+  background: transparent;
+  color: #a1a1aa;
+  border-color: #27272a;
+}
+
+.yb-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fafafa;
 }
 
 .yb-btn-danger {
-  background: none;
-  color: #fca5a5;
-  border-color: #7f1d1d;
+  background: transparent;
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.yb-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .yb-btn-primary {
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  color: #fff;
-  font-weight: 700;
+  background: #fafafa;
+  color: #09090b;
+  font-weight: 600;
+}
+
+.yb-btn-primary:hover {
+  background: #e4e4e7;
 }
 
 .yb-toast {
