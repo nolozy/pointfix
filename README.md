@@ -63,7 +63,7 @@ After the changes, briefly tell me what you changed.
 - **Dashed boxes with numbers** — points stay visible on the page where they were made and follow their elements across fixed, sticky and scrollable panels; the numbers match the prompt.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
-- **Edit or delete one point** — click its number.
+- **Edit, delete or undo** — click a point's number to edit or delete it. After **Delete all**, an **Undo** button appears in the message for a few seconds so you can restore the cleared points.
 - **Screenshot with the points** — **Copy image** (or `Alt+Shift+C`) copies a picture of the visible part of the page with the numbered boxes and each instruction written next to its box. Paste it into an agent that reads images, together with the prompt. Works on https and localhost pages (the browser only allows image copying there).
 - **Areas** — while pointing, drag to draw a rectangle (pink). Use it for a whole region or for empty space ("add a button here"). The prompt gets the area's size and place, the element around it and the elements inside it. `Esc` cancels a drag.
 - **Parent and child** — while pointing, press `↑` to pick the parent of the highlighted element (for example the whole card instead of one line) and `↓` to go back. Moving the mouse starts again from the element under it.

@@ -388,19 +388,41 @@ button {
 .yb-toast {
   position: fixed;
   left: 50%;
-  bottom: 28px;
+  bottom: 64px;
   transform: translateX(-50%);
   z-index: 2147483004;
-  background: #111827;
-  color: #fff;
-  border: 1px solid #4f46e5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(24, 24, 27, 0.96);
+  color: #fafafa;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  padding: 9px 18px;
-  font: 13px/1.4 -apple-system, "Segoe UI", sans-serif;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 7px 14px;
+  font: 500 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   pointer-events: none;
-  animation: yb-toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: yb-toast-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+.yb-toast-interactive {
+  pointer-events: auto;
+}
+
+.yb-toast-btn {
+  background: #fafafa;
+  color: #09090b;
+  border: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 600 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease-out, transform 0.1s ease-out;
+}
+
+.yb-toast-btn:hover { background: #e4e4e7; }
+.yb-toast-btn:active { transform: scale(0.96); }
 
 @keyframes yb-toast-in {
   from { opacity: 0; transform: translate(-50%, 8px); }

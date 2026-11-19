@@ -398,11 +398,31 @@
   const toast = makeEl("div", "yb-toast");
   toast.style.display = "none";
   let toastTimer = null;
-  function showToast(msg, ms) {
-    toast.textContent = msg;
-    toast.style.display = "block";
+  function showToast(msg, ms, action) {
+    toast.textContent = "";
+    toast.classList.toggle("yb-toast-interactive", !!action);
+    if (action) {
+      toast.appendChild(makeEl("span", "yb-toast-msg", msg));
+      const btn = makeEl("button", "yb-toast-btn", action.label);
+      btn.type = "button";
+      let clicked = false;
+      btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (clicked) return;
+        clicked = true;
+        action.onClick();
+      });
+      toast.appendChild(btn);
+    } else {
+      toast.textContent = msg;
+    }
+    toast.style.display = "flex";
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toast.style.display = "none"; }, ms || 2200);
+    toastTimer = setTimeout(() => {
+      toast.style.display = "none";
+      toast.classList.remove("yb-toast-interactive");
+    }, ms || 2200);
   }
 
   // Short ripple ring at the click point; removes itself when the animation ends.
@@ -873,12 +893,24 @@
   }
 
   // Deletes the points of this site only; other sites keep theirs.
+  // Shows an Undo button in the toast for a few seconds so accidental clears can be restored.
   async function deleteAll() {
     try {
       const res = await mutateAnnotations({ op: "deleteOrigin", origin: location.origin });
-      const removed = res.removed ? res.removed.length : 0;
+      const removedItems = Array.isArray(res.removed) ? res.removed : [];
+      const removed = removedItems.length;
       if (!removed) { showToast("No points on this site yet"); return; }
-      showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
+      showToast("Deleted " + removed + (removed === 1 ? " point" : " points"), 6000, {
+        label: "Undo",
+        onClick: async () => {
+          try {
+            await mutateAnnotations({ op: "restore", items: removedItems });
+            showToast("Restored " + removed + (removed === 1 ? " point" : " points"));
+          } catch (e) {
+            showToast(RELOAD_MSG, 4000);
+          }
+        }
+      });
     } catch (e) {
       showToast(RELOAD_MSG, 4000);
     }
