@@ -22,6 +22,11 @@
   };
 
   const state = { point: false, editing: false };
+  const isTop = window === window.top;
+  let tabOrigin = location.origin;
+  if (!isTop) {
+    try { tabOrigin = window.top.location.origin; } catch (e) { /* cross-origin: resolved via background */ }
+  }
   let pageCount = 0;
 
   // One page = origin + path + query, plus the hash when it is a route (#/... or #!...).
@@ -34,11 +39,12 @@
   // Points belong to a site (origin). Count, numbers, copy and delete only use
   // the points of the site that is open, so other projects never leak in.
   function originOf(a) {
+    if (a && a.siteOrigin) return a.siteOrigin;
     try { return new URL(a.url).origin; } catch (e) { return ""; }
   }
 
   function siteItems(all) {
-    return all.filter((a) => originOf(a) === location.origin);
+    return all.filter((a) => originOf(a) === tabOrigin);
   }
 
   // Host element + open Shadow DOM so page CSS (resets, button rules, etc.)
@@ -296,6 +302,7 @@
       current: currentStyles(el),
       pageKey: pageKey(),
       url: location.href,
+      inFrame: !isTop,
       selector: buildSelector(el),
       tagName: el.tagName,
       innerText: shortText(el),
@@ -329,7 +336,8 @@
     lines.push("");
     list.forEach((a, i) => {
       lines.push((ja ? "## 注釈 " : "## Annotation ") + (i + 1));
-      lines.push("**URL**: " + a.url);
+      lines.push("**URL**: " + (a.inFrame && a.topUrl ? a.topUrl : a.url));
+      if (a.inFrame) lines.push((ja ? "**フレーム**: " : "**Frame**: ") + a.url);
       if (a.kind === "area") {
         // An area drawn by dragging: where it is, what holds it and what is in it.
         if (ja) {
@@ -437,6 +445,7 @@
   toast.style.display = "none";
   let toastTimer = null;
   function showToast(msg, ms, action) {
+    if (!isTop) return;
     toast.textContent = "";
     toast.classList.toggle("yb-toast-interactive", !!action);
     if (action) {
@@ -619,8 +628,8 @@
     if (!overlay.isConnected) uiRoot.appendChild(overlay);
     if (!cursorEl.isConnected) uiRoot.appendChild(cursorEl);
     if (!boxLayer.isConnected) uiRoot.appendChild(boxLayer);
-    if (!toast.isConnected) uiRoot.appendChild(toast);
-    if (!bar.isConnected) uiRoot.appendChild(bar);
+    if (isTop && !toast.isConnected) uiRoot.appendChild(toast);
+    if (isTop && !bar.isConnected) uiRoot.appendChild(bar);
   }
 
   // ---------- editor ----------
@@ -920,6 +929,7 @@
   // each instruction drawn next to its box. The bar, cursor and editor are
   // hidden while the picture is taken.
   async function copyImage() {
+    if (!isTop) return;
     let site;
     try { site = siteItems(await loadAll()); } catch (e) { showToast(RELOAD_MSG, 4000); return; }
     if (!site.length) { showToast("No points on this site yet"); return; }
@@ -934,6 +944,7 @@
     const root = document.documentElement;
     root.classList.add("yb-capturing");
     uiHost.classList.add("yb-capturing");
+    chrome.runtime.sendMessage({ type: "YB_SYNC_CAPTURING", on: true }).catch(() => {});
     // Wait for the notes to be painted (rAF), with a timer in case frames are paused.
     await new Promise((r) => {
       let done = false;
@@ -945,6 +956,7 @@
     try { res = await chrome.runtime.sendMessage({ type: "YB_CAPTURE" }); } catch (e) { res = null; }
     root.classList.remove("yb-capturing");
     uiHost.classList.remove("yb-capturing");
+    chrome.runtime.sendMessage({ type: "YB_SYNC_CAPTURING", on: false }).catch(() => {});
     if (res && res.error === "not-front") {
       showToast("Bring this tab to the front, then try again", 3500);
       return;
@@ -953,7 +965,7 @@
     try {
       const blob = await (await fetch(res.dataUrl)).blob();
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      const shown = site.filter((a) => a.pageKey === pageKey()).length;
+      const shown = site.filter((a) => a.pageKey === pageKey() || (a.inFrame && a.topUrl === location.href)).length;
       showToast("Image copied (" + shown + (shown === 1 ? " point" : " points") + " on screen). Paste it into your AI agent.", 3000);
     } catch (e) {
       showToast("Copy failed. Click the page once and try again.", 3500);
@@ -963,8 +975,9 @@
   // Deletes the points of this site only; other sites keep theirs.
   // Shows an Undo button in the toast for a few seconds so accidental clears can be restored.
   async function deleteAll() {
+    if (!isTop) return;
     try {
-      const res = await mutateAnnotations({ op: "deleteOrigin", origin: location.origin });
+      const res = await mutateAnnotations({ op: "deleteOrigin", origin: tabOrigin });
       const removedItems = Array.isArray(res.removed) ? res.removed : [];
       const removed = removedItems.length;
       if (!removed) { showToast("No points on this site yet"); return; }
@@ -986,12 +999,13 @@
 
   // ---------- point mode ----------
 
-  function setPoint(on) {
+  function setPoint(on, fromSync) {
+    if (state.point === on) return;
     state.point = on;
     document.documentElement.classList.toggle("yb-point", on);
     if (on) {
       ensureMounted();
-      cursorEl.classList.add("yb-on");
+      if (isTop) cursorEl.classList.add("yb-on");
       showToast("Point mode on. Click an element or drag an area. ↑/↓ for parent/child, Esc to stop.", 3000);
     } else {
       hideOverlay();
@@ -999,7 +1013,10 @@
       cursorEl.classList.remove("yb-on");
       showToast("Point mode off", 1600);
     }
-    updateBar();
+    if (isTop) updateBar();
+    if (!fromSync) {
+      chrome.runtime.sendMessage({ type: "YB_SYNC_POINT", on }).catch(() => {});
+    }
   }
 
   // The element under the mouse (hoverEl) and the element that will be picked
@@ -1020,7 +1037,7 @@
   document.addEventListener("mouseover", (ev) => {
     if (!state.point || state.editing || area.drawing) return;
     const el = ev.target;
-    if (!el || el.nodeType !== 1 || isOwnUI(el)) { hideOverlay(); return; }
+    if (!el || el.nodeType !== 1 || isOwnUI(el) || el.tagName === "IFRAME") { hideOverlay(); return; }
     hoverEl = el;
     pickEl = el;
     showPick(el);
@@ -1050,16 +1067,16 @@
 
   // Arrow follows the mouse only in Point mode. Over our own bar the normal
   // pointer is shown instead, so the arrow does not lag behind down there.
-  let overUI = false;
+  let overUI = !isTop;
   document.addEventListener("mousemove", (ev) => {
     if (!state.point) return;
-    if (isOwnUI(ev.target)) {
+    if (isOwnUI(ev.target) || (ev.target && ev.target.tagName === "IFRAME")) {
       overUI = true;
       cursorEl.classList.remove("yb-on");
       return;
     }
     if (overUI) {
-      // Coming back from the bar: start the arrow at the mouse, not where it was.
+      // Coming back from the bar or entering a frame: start the arrow at the mouse.
       overUI = false;
       cur.x = ev.clientX;
       cur.y = ev.clientY;
@@ -1069,6 +1086,13 @@
     cur.ty = ev.clientY;
     if (!cur.raf) cur.raf = requestAnimationFrame(tickCursor);
   }, { capture: true, passive: true });
+
+  document.addEventListener("mouseleave", () => {
+    if (!state.point) return;
+    overUI = true;
+    hideOverlay();
+    cursorEl.classList.remove("yb-on");
+  });
 
   // In Point mode the page must not react to the click at all: menus that open on
   // pointerdown, drags, double-clicks and so on. Listen on window in the capture
@@ -1164,6 +1188,7 @@
       source: sourceText(probe),
       pageKey: pageKey(),
       url: location.href,
+      inFrame: !isTop,
       selector: buildSelector(container),
       tagName: container.tagName,
       innerText: "",
@@ -1276,10 +1301,16 @@
 
   chrome.runtime.onMessage.addListener((message) => {
     if (!message || typeof message.type !== "string") return;
-    if (message.type === "YB_TOGGLE_POINT") setPoint(!state.point);
-    else if (message.type === "YB_COPY_PROMPT") copyPrompt();
-    else if (message.type === "YB_COPY_IMAGE") copyImage();
-    else if (message.type === "YB_DELETE_ALL") deleteAll();
+    if (message.type === "YB_SET_POINT") setPoint(!!message.on, true);
+    else if (message.type === "YB_SET_CAPTURING") {
+      document.documentElement.classList.toggle("yb-capturing", !!message.on);
+      uiHost.classList.toggle("yb-capturing", !!message.on);
+    } else if (isTop) {
+      if (message.type === "YB_TOGGLE_POINT") setPoint(!state.point);
+      else if (message.type === "YB_COPY_PROMPT") copyPrompt();
+      else if (message.type === "YB_COPY_IMAGE") copyImage();
+      else if (message.type === "YB_DELETE_ALL") deleteAll();
+    }
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -1327,10 +1358,19 @@
 
   ensureMounted();
   render();
-  chrome.storage.local.get([BAR_KEY, BAR_SITES_KEY, BAR_POS_KEY]).then((d) => {
-    barGlobalPref = d[BAR_KEY];
-    barSiteMap = d[BAR_SITES_KEY] || null;
-    savedPos = d[BAR_POS_KEY] || null;
-    syncBarVisible();
-  });
+  if (isTop) {
+    chrome.storage.local.get([BAR_KEY, BAR_SITES_KEY, BAR_POS_KEY]).then((d) => {
+      barGlobalPref = d[BAR_KEY];
+      barSiteMap = d[BAR_SITES_KEY] || null;
+      savedPos = d[BAR_POS_KEY] || null;
+      syncBarVisible();
+    });
+  } else {
+    chrome.runtime.sendMessage({ type: "YB_TAB_ORIGIN" }).then((r) => {
+      if (r && r.origin && r.origin !== tabOrigin) {
+        tabOrigin = r.origin;
+        render();
+      }
+    }).catch(() => {});
+  }
 })();

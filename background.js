@@ -33,6 +33,7 @@ function resolveBarVisible(urlStr, globalPref, siteMap) {
 let storageQueue = Promise.resolve();
 
 function originOf(a) {
+  if (a && a.siteOrigin) return a.siteOrigin;
   try { return new URL(a.url).origin; } catch (e) { return ""; }
 }
 
@@ -42,15 +43,24 @@ function enqueueMutation(fn) {
   return next;
 }
 
-async function applyMutation(msg) {
+async function applyMutation(msg, sender) {
   const data = await chrome.storage.local.get(STORAGE_KEY);
   let list = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY].slice() : [];
   let removed = [];
 
   if (msg.op === "add" && msg.item && msg.item.id) {
-    const idx = list.findIndex((a) => a.id === msg.item.id);
-    if (idx >= 0) list[idx] = msg.item;
-    else list.push(msg.item);
+    const item = { ...msg.item };
+    // Attach the top tab's origin/URL so points inside cross-origin or child iframes
+    // belong to the page the user has open.
+    if (sender && sender.tab && sender.tab.url) {
+      try {
+        item.siteOrigin = new URL(sender.tab.url).origin;
+        if (item.inFrame && !item.topUrl) item.topUrl = sender.tab.url;
+      } catch (e) { /* keep */ }
+    }
+    const idx = list.findIndex((a) => a.id === item.id);
+    if (idx >= 0) list[idx] = item;
+    else list.push(item);
   } else if (msg.op === "update" && msg.id && msg.patch) {
     const idx = list.findIndex((a) => a.id === msg.id);
     if (idx >= 0) list[idx] = { ...list[idx], ...msg.patch };
@@ -85,7 +95,7 @@ async function sendToActiveTab(message) {
   const tab = await getActiveTab();
   if (!tab || !tab.id) return;
   try {
-    await chrome.tabs.sendMessage(tab.id, message);
+    await chrome.tabs.sendMessage(tab.id, message, { frameId: 0 });
   } catch (e) {
     // The content script is not available on this page (for example chrome:// pages).
   }
@@ -193,10 +203,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || typeof message.type !== "string") return;
 
   if (message.type === "YB_MUTATE") {
-    enqueueMutation(() => applyMutation(message))
+    enqueueMutation(() => applyMutation(message, sender))
       .then((res) => sendResponse(res))
       .catch((e) => sendResponse({ ok: false, error: String((e && e.message) || e) }));
     return true;
+  }
+
+  if (message.type === "YB_SYNC_POINT" && sender.tab && sender.tab.id) {
+    chrome.tabs.sendMessage(sender.tab.id, { type: "YB_SET_POINT", on: !!message.on }).catch(() => {});
+    sendResponse({ ok: true });
+    return;
+  }
+
+  if (message.type === "YB_SYNC_CAPTURING" && sender.tab && sender.tab.id) {
+    chrome.tabs.sendMessage(sender.tab.id, { type: "YB_SET_CAPTURING", on: !!message.on }).catch(() => {});
+    sendResponse({ ok: true });
+    return;
+  }
+
+  if (message.type === "YB_TAB_ORIGIN") {
+    let origin = "";
+    try { if (sender.tab && sender.tab.url) origin = new URL(sender.tab.url).origin; } catch (e) { /* ignore */ }
+    sendResponse({ origin });
+    return;
   }
 
   if (message.type !== "YB_CAPTURE" || !sender.tab) return;

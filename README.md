@@ -62,6 +62,7 @@ After the changes, briefly tell me what you changed.
 - **Hover to highlight, click to point** — a short label shows what you are pointing at.
 - **Dashed boxes with numbers** — points stay visible on the page where they were made and follow their elements across fixed, sticky and scrollable panels; the numbers match the prompt.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
+- **Elements inside iframes** — works inside embedded frames (such as Storybook or preview iframes) too; the bar stays on the main page and each iframe point includes its `**Frame**` URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
 - **Edit, delete or undo** — click a point's number to edit or delete it. After **Delete all**, an **Undo** button appears in the message for a few seconds so you can restore the cleared points.
 - **Screenshot with the points** — **Copy image** (or `Alt+Shift+C`) copies a picture of the visible part of the page with the numbered boxes and each instruction written next to its box. Paste it into an agent that reads images, together with the prompt. Works on https and localhost pages (the browser only allows image copying there).
