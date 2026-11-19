@@ -136,7 +136,7 @@ The idea was inspired by UISelector2AI, which turns a selected element into a pr
 ```
 pointfix/
 ├── manifest.json     Manifest V3
-├── background.js     Service worker: toolbar icon, shortcuts, bar visibility, screenshots
+├── background.js     Service worker: toolbar icon, shortcuts, bar visibility, screenshots, storage writes
 ├── content.js        Point mode, the bar, the boxes, areas, screenshots and the prompt
 ├── ui-styles.js      Styles of the in-page UI (applied inside Shadow DOM)
 ├── page-probe.js     Runs in the page to read the component and source location

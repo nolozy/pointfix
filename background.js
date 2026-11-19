@@ -3,6 +3,55 @@
 // The keyboard shortcuts are sent to the content script of the active tab.
 
 const BAR_KEY = "yb_bar_visible";
+const STORAGE_KEY = "yb_annotations";
+
+// Serialize all annotation writes through the single service worker so two tabs
+// saving at the same time never overwrite each other's changes.
+let storageQueue = Promise.resolve();
+
+function originOf(a) {
+  try { return new URL(a.url).origin; } catch (e) { return ""; }
+}
+
+function enqueueMutation(fn) {
+  const next = storageQueue.then(fn, fn);
+  storageQueue = next.catch(() => {});
+  return next;
+}
+
+async function applyMutation(msg) {
+  const data = await chrome.storage.local.get(STORAGE_KEY);
+  let list = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY].slice() : [];
+  let removed = [];
+
+  if (msg.op === "add" && msg.item && msg.item.id) {
+    const idx = list.findIndex((a) => a.id === msg.item.id);
+    if (idx >= 0) list[idx] = msg.item;
+    else list.push(msg.item);
+  } else if (msg.op === "update" && msg.id && msg.patch) {
+    const idx = list.findIndex((a) => a.id === msg.id);
+    if (idx >= 0) list[idx] = { ...list[idx], ...msg.patch };
+  } else if (msg.op === "delete" && msg.id) {
+    removed = list.filter((a) => a.id === msg.id);
+    list = list.filter((a) => a.id !== msg.id);
+  } else if (msg.op === "deleteOrigin" && msg.origin) {
+    removed = list.filter((a) => originOf(a) === msg.origin);
+    list = list.filter((a) => originOf(a) !== msg.origin);
+  } else if (msg.op === "restore" && Array.isArray(msg.items)) {
+    const existing = new Set(list.map((a) => a.id));
+    for (const item of msg.items) {
+      if (item && item.id && !existing.has(item.id)) {
+        list.push(item);
+        existing.add(item.id);
+      }
+    }
+  } else {
+    return { ok: false, error: "unknown-op" };
+  }
+
+  await chrome.storage.local.set({ [STORAGE_KEY]: list });
+  return { ok: true, list, removed };
+}
 
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -50,7 +99,16 @@ chrome.commands.onCommand.addListener((command) => {
 // captureVisibleTab takes whatever tab is in front in the window, so only
 // capture when the asking tab is that tab; never another page.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== "YB_CAPTURE" || !sender.tab) return;
+  if (!message || typeof message.type !== "string") return;
+
+  if (message.type === "YB_MUTATE") {
+    enqueueMutation(() => applyMutation(message))
+      .then((res) => sendResponse(res))
+      .catch((e) => sendResponse({ ok: false, error: String((e && e.message) || e) }));
+    return true;
+  }
+
+  if (message.type !== "YB_CAPTURE" || !sender.tab) return;
   (async () => {
     try {
       const [front] = await chrome.tabs.query({ active: true, windowId: sender.tab.windowId });

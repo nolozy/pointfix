@@ -140,7 +140,7 @@ UISelector2AI の「要素を選んでAI用プロンプトにする」という�
 ```
 pointfix/
 ├── manifest.json     Manifest V3
-├── background.js     サービスワーカー: ツールバーのアイコン、ショートカット、バーの表示切り替え、スクリーンショット
+├── background.js     サービスワーカー: ツールバーのアイコン、ショートカット、バーの表示切り替え、スクリーンショット、保存の直列化
 ├── content.js        指さしモード、バー、枠、範囲指定、スクリーンショット、プロンプト
 ├── ui-styles.js      ページ内の UI のスタイル（Shadow DOM 内に適用）
 ├── page-probe.js     ページ側で動き、コンポーネント名とソースの場所を読む

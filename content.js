@@ -274,9 +274,7 @@
 
   async function updateStoredSource(id, source) {
     try {
-      const list = await loadAll();
-      const item = list.find((a) => a.id === id);
-      if (item && item.source !== source) { item.source = source; await saveAll(list); }
+      await mutateAnnotations({ op: "update", id, patch: { source } });
     } catch (e) { /* the point may not be saved yet, or the page is stale */ }
   }
 
@@ -588,19 +586,15 @@
       const text = input.value.trim();
       if (!text) { showToast("Type what should change"); input.focus(); return; }
       try {
-        const list = await loadAll();
         if (editId) {
-          const item = list.find((a) => a.id === editId);
-          if (item) item.instruction = text;
-          await saveAll(list);
+          await mutateAnnotations({ op: "update", id: editId, patch: { instruction: text } });
           closeEditor();
           showToast("Point updated");
         } else {
           info.instruction = text;
-          list.push(info);
-          await saveAll(list);
+          const res = await mutateAnnotations({ op: "add", item: info });
           closeEditor();
-          showToast("Point " + siteItems(list).length + " added");
+          showToast("Point " + siteItems(res.list).length + " added");
         }
       } catch (e) {
         showToast(RELOAD_MSG, 4000);
@@ -612,8 +606,7 @@
       delBtn.type = "button";
       delBtn.addEventListener("click", async () => {
         try {
-          const list = await loadAll();
-          await saveAll(list.filter((a) => a.id !== editId));
+          await mutateAnnotations({ op: "delete", id: editId });
           closeEditor();
           showToast("Point deleted");
         } catch (e) {
@@ -659,8 +652,12 @@
     return Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
   }
 
-  async function saveAll(list) {
-    await chrome.storage.local.set({ [STORAGE_KEY]: list });
+  // Every write goes through the single background service worker queue so two
+  // tabs saving at the same time never overwrite each other.
+  async function mutateAnnotations(payload) {
+    const res = await chrome.runtime.sendMessage({ type: "YB_MUTATE", ...payload });
+    if (!res || !res.ok) throw new Error((res && res.error) || "storage-failed");
+    return res;
   }
 
   // ---------- boxes ----------
@@ -877,12 +874,14 @@
 
   // Deletes the points of this site only; other sites keep theirs.
   async function deleteAll() {
-    const all = await loadAll();
-    const rest = all.filter((a) => originOf(a) !== location.origin);
-    const removed = all.length - rest.length;
-    if (!removed) { showToast("No points on this site yet"); return; }
-    await saveAll(rest);
-    showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
+    try {
+      const res = await mutateAnnotations({ op: "deleteOrigin", origin: location.origin });
+      const removed = res.removed ? res.removed.length : 0;
+      if (!removed) { showToast("No points on this site yet"); return; }
+      showToast("Deleted " + removed + (removed === 1 ? " point" : " points"));
+    } catch (e) {
+      showToast(RELOAD_MSG, 4000);
+    }
   }
 
   // ---------- point mode ----------
