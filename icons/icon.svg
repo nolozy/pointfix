@@ -1,27 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <!-- Background Gradient: Indigo (#6366f1) to Pink (#ec4899) at 45 degrees -->
-    <linearGradient id="pointfixGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#ec4899"/>
+    <!-- Subtle monochrome dark background -->
+    <linearGradient id="pointfixMono" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#27272a"/>
+      <stop offset="100%" stop-color="#09090b"/>
     </linearGradient>
   </defs>
 
-  <!-- Rounded Square Background (Radius: 28) -->
-  <rect x="0" y="0" width="128" height="128" rx="28" ry="28" fill="url(#pointfixGradient)"/>
+  <!-- Rounded Square Background (Radius: 28) with subtle border for dark toolbars -->
+  <rect x="1.5" y="1.5" width="125" height="125" rx="27" ry="27" fill="url(#pointfixMono)" stroke="#3f3f46" stroke-width="3"/>
 
   <!-- Main Centered Large Pointer Arrow -->
-  <path d="M42 22 
-           L42 102 
-           L64 80 
-           L81 108 
-           L95 99 
-           L78 71 
-           L108 71 
-           Z" 
-        fill="#ffffff" 
-        stroke="#ffffff" 
-        stroke-width="6" 
-        stroke-linejoin="round" 
+  <path d="M42 22
+           L42 102
+           L64 80
+           L81 108
+           L95 99
+           L78 71
+           L108 71
+           Z"
+        fill="#fafafa"
+        stroke="#fafafa"
+        stroke-width="6"
+        stroke-linejoin="round"
         stroke-linecap="round"/>
 </svg>
