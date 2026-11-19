@@ -142,8 +142,9 @@ pointfix/
 ├── manifest.json     Manifest V3
 ├── background.js     サービスワーカー: ツールバーのアイコン、ショートカット、バーの表示切り替え、スクリーンショット
 ├── content.js        指さしモード、バー、枠、範囲指定、スクリーンショット、プロンプト
+├── ui-styles.js      ページ内の UI のスタイル（Shadow DOM 内に適用）
 ├── page-probe.js     ページ側で動き、コンポーネント名とソースの場所を読む
-├── content.css       ページ内の UI のスタイル
+├── content.css       指さしモード時のページ側カーソル制御
 ├── icons/            拡張機能のアイコン（Chrome 用の PNG と、元になる SVG）
 ├── docs/             この README で使う画像
 ├── README.md         English

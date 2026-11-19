@@ -40,8 +40,39 @@
     return all.filter((a) => originOf(a) === location.origin);
   }
 
+  // Host element + open Shadow DOM so page CSS (resets, button rules, etc.)
+  // cannot break Pointfix's UI. Placed at (0,0) in document space so the dashed
+  // boxes inside match page coordinates while fixed panels stay on the viewport.
+  const uiHost = document.createElement("pointfix-root");
+  uiHost.id = "pointfix-root";
+  uiHost.setAttribute("data-yb-ui", "1");
+  uiHost.style.cssText =
+    "all:initial!important;" +
+    "display:block!important;" +
+    "position:absolute!important;" +
+    "left:0!important;" +
+    "top:0!important;" +
+    "width:0!important;" +
+    "height:0!important;" +
+    "overflow:visible!important;" +
+    "pointer-events:none!important;" +
+    "z-index:2147483000!important;";
+  const uiRoot = uiHost.attachShadow({ mode: "open" });
+  if (typeof CSSStyleSheet === "function" && "adoptedStyleSheets" in uiRoot) {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(globalThis.__ybUIStyles || "");
+    uiRoot.adoptedStyleSheets = [sheet];
+  } else {
+    const st = document.createElement("style");
+    st.textContent = globalThis.__ybUIStyles || "";
+    uiRoot.appendChild(st);
+  }
+
   function isOwnUI(el) {
-    return !!(el && el.closest && el.closest("[data-yb-ui]"));
+    if (!el) return false;
+    if (el === uiHost) return true;
+    if (el.getRootNode && el.getRootNode() === uiRoot) return true;
+    return !!(el.closest && el.closest("[data-yb-ui]"));
   }
 
   function makeEl(tag, className, text) {
@@ -340,6 +371,7 @@
 
   // Arrow that follows the mouse in Point mode.
   const cursorEl = makeEl("div", "yb-cursor");
+  cursorEl.setAttribute("part", "cursor");
   cursorEl.innerHTML =
     '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">' +
     '<path d="M4 2 L4 19 L8.6 14.8 L11.4 21.6 L14.2 20.4 L11.4 13.6 L17.6 13.6 Z" ' +
@@ -377,11 +409,12 @@
 
   // Short ripple ring at the click point; removes itself when the animation ends.
   function ripple(x, y) {
+    ensureMounted();
     const r = makeEl("div", "yb-ripple");
     r.style.left = x + "px";
     r.style.top = y + "px";
     r.addEventListener("animationend", () => r.remove());
-    document.documentElement.appendChild(r);
+    uiRoot.appendChild(r);
   }
 
   function barButton(label, hint, extra) {
@@ -489,11 +522,12 @@
   window.addEventListener("resize", () => applyBarPos(savedPos));
 
   function ensureMounted() {
-    if (!overlay.isConnected) document.documentElement.appendChild(overlay);
-    if (!cursorEl.isConnected) document.documentElement.appendChild(cursorEl);
-    if (!boxLayer.isConnected) document.documentElement.appendChild(boxLayer);
-    if (!toast.isConnected) document.documentElement.appendChild(toast);
-    if (!bar.isConnected) document.documentElement.appendChild(bar);
+    if (!uiHost.isConnected) document.documentElement.appendChild(uiHost);
+    if (!overlay.isConnected) uiRoot.appendChild(overlay);
+    if (!cursorEl.isConnected) uiRoot.appendChild(cursorEl);
+    if (!boxLayer.isConnected) uiRoot.appendChild(boxLayer);
+    if (!toast.isConnected) uiRoot.appendChild(toast);
+    if (!bar.isConnected) uiRoot.appendChild(bar);
   }
 
   // ---------- editor ----------
@@ -587,7 +621,8 @@
     }));
 
     editor.append(title, target, input, row);
-    document.documentElement.appendChild(editor);
+    ensureMounted();
+    uiRoot.appendChild(editor);
 
     // Position near the element, clamped to the viewport.
     const W = 340, H = editor.offsetHeight || 200;
@@ -713,6 +748,7 @@
     }
     const root = document.documentElement;
     root.classList.add("yb-capturing");
+    uiHost.classList.add("yb-capturing");
     // Wait for the notes to be painted (rAF), with a timer in case frames are paused.
     await new Promise((r) => {
       let done = false;
@@ -723,6 +759,7 @@
     let res = null;
     try { res = await chrome.runtime.sendMessage({ type: "YB_CAPTURE" }); } catch (e) { res = null; }
     root.classList.remove("yb-capturing");
+    uiHost.classList.remove("yb-capturing");
     if (res && res.error === "not-front") {
       showToast("Bring this tab to the front, then try again", 3500);
       return;
@@ -865,9 +902,10 @@
 
   function drawDraft(r) {
     if (!area.draft) {
+      ensureMounted();
       area.draft = makeEl("div", "yb-area-draft");
       area.draft.appendChild(makeEl("div", "yb-area-size"));
-      document.documentElement.appendChild(area.draft);
+      uiRoot.appendChild(area.draft);
     }
     area.draft.style.transform = "translate(" + r.left + "px, " + r.top + "px)";
     area.draft.style.width = r.width + "px";

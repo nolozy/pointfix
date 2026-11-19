@@ -46,6 +46,7 @@
         "https://*/*"
       ],
       "js": [
+        "ui-styles.js",
         "content.js"
       ],
       "css": [

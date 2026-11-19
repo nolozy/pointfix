@@ -138,8 +138,9 @@ pointfix/
 ├── manifest.json     Manifest V3
 ├── background.js     Service worker: toolbar icon, shortcuts, bar visibility, screenshots
 ├── content.js        Point mode, the bar, the boxes, areas, screenshots and the prompt
+├── ui-styles.js      Styles of the in-page UI (applied inside Shadow DOM)
 ├── page-probe.js     Runs in the page to read the component and source location
-├── content.css       Styles of the in-page UI
+├── content.css       Page-level cursor rule for Point mode
 ├── icons/            Extension icons (PNG for Chrome, SVG source)
 ├── docs/             Images used in this README
 ├── README.md         English
