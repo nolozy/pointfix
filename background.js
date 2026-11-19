@@ -3,7 +3,30 @@
 // The keyboard shortcuts are sent to the content script of the active tab.
 
 const BAR_KEY = "yb_bar_visible";
+const BAR_SITES_KEY = "yb_bar_sites";
 const STORAGE_KEY = "yb_annotations";
+
+// Dev / preview hosts where the bar is shown automatically by default.
+const DEV_HOST_RE = /(?:^|\.)(?:localhost|local|test|invalid|example|vercel\.app|pages\.dev|netlify\.app|fly\.dev|railway\.app|onrender\.com|github\.io|ngrok-free\.app|ngrok\.io)$/i;
+const PRIVATE_IP_RE = /^(?:127(?:\.\d+){3}|10(?:\.\d+){3}|192\.168(?:\.\d+){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d+){2}|0\.0\.0\.0|\[?::1\]?)$/;
+
+function isDevHost(hostname, protocol) {
+  if (protocol === "file:") return true;
+  if (!hostname) return false;
+  return DEV_HOST_RE.test(hostname) || PRIVATE_IP_RE.test(hostname);
+}
+
+function resolveBarVisible(urlStr, globalPref, siteMap) {
+  if (globalPref === false) return false;
+  try {
+    const u = new URL(urlStr);
+    if (siteMap && typeof siteMap[u.origin] === "boolean") return siteMap[u.origin];
+    if (globalPref === true) return true;
+    return isDevHost(u.hostname, u.protocol);
+  } catch (e) {
+    return globalPref === true;
+  }
+}
 
 // Serialize all annotation writes through the single service worker so two tabs
 // saving at the same time never overwrite each other's changes.
@@ -68,24 +91,86 @@ async function sendToActiveTab(message) {
   }
 }
 
-function setTitleFor(visible) {
-  chrome.action.setTitle({
-    title: visible
-      ? "Pointfix: bar is shown. Click to hide it."
-      : "Pointfix: bar is hidden. Click to show it."
+function setTitleFor(globalPref) {
+  let title = "Pointfix: shown on dev sites. Click to toggle on this site.";
+  if (globalPref === true) title = "Pointfix: shown on all sites. Click to toggle on this site.";
+  else if (globalPref === false) title = "Pointfix: hidden on all sites. Click to show on this site.";
+  chrome.action.setTitle({ title });
+}
+
+function setupMenus(globalPref) {
+  if (!chrome.contextMenus) return;
+  chrome.contextMenus.removeAll(() => {
+    const mode = globalPref === true ? "all" : globalPref === false ? "none" : "dev";
+    chrome.contextMenus.create({ id: "pf-mode-dev", title: "Show on dev sites only (default)", type: "radio", checked: mode === "dev", contexts: ["action"] });
+    chrome.contextMenus.create({ id: "pf-mode-all", title: "Show on all sites", type: "radio", checked: mode === "all", contexts: ["action"] });
+    chrome.contextMenus.create({ id: "pf-mode-none", title: "Hide on all sites", type: "radio", checked: mode === "none", contexts: ["action"] });
   });
 }
 
-// Clicking the toolbar icon flips the bar setting. The content scripts
-// on every tab react to the stored value.
-chrome.action.onClicked.addListener(async () => {
+async function syncMenusAndTitle() {
   const data = await chrome.storage.local.get(BAR_KEY);
-  const visible = data[BAR_KEY] !== false;
-  await chrome.storage.local.set({ [BAR_KEY]: !visible });
-  setTitleFor(!visible);
+  const g = data[BAR_KEY];
+  setTitleFor(g);
+  if (chrome.contextMenus) {
+    chrome.contextMenus.update("pf-mode-dev", { checked: g !== true && g !== false }).catch(() => {});
+    chrome.contextMenus.update("pf-mode-all", { checked: g === true }).catch(() => {});
+    chrome.contextMenus.update("pf-mode-none", { checked: g === false }).catch(() => {});
+  }
+}
+
+async function toggleBarForTab(tab) {
+  const data = await chrome.storage.local.get([BAR_KEY, BAR_SITES_KEY]);
+  const globalPref = data[BAR_KEY];
+  const siteMap = (data[BAR_SITES_KEY] && typeof data[BAR_SITES_KEY] === "object") ? { ...data[BAR_SITES_KEY] } : {};
+
+  if (tab && tab.url && /^(https?|file):/i.test(tab.url)) {
+    const u = new URL(tab.url);
+    const nowVisible = resolveBarVisible(tab.url, globalPref, siteMap);
+    if (!nowVisible) {
+      if (globalPref === false) await chrome.storage.local.remove(BAR_KEY);
+      siteMap[u.origin] = true;
+    } else {
+      siteMap[u.origin] = false;
+    }
+    await chrome.storage.local.set({ [BAR_SITES_KEY]: siteMap });
+  } else {
+    // Non-web pages (chrome:// etc.): toggle global visibility.
+    if (globalPref === false) await chrome.storage.local.remove(BAR_KEY);
+    else await chrome.storage.local.set({ [BAR_KEY]: false });
+  }
+  await syncMenusAndTitle();
+}
+
+// Clicking the toolbar icon toggles the bar for the current site.
+chrome.action.onClicked.addListener((tab) => { toggleBarForTab(tab); });
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.get(BAR_KEY).then((d) => {
+    setTitleFor(d[BAR_KEY]);
+    setupMenus(d[BAR_KEY]);
+  });
 });
 
-chrome.storage.local.get(BAR_KEY).then((data) => setTitleFor(data[BAR_KEY] !== false));
+chrome.storage.local.get(BAR_KEY).then((d) => {
+  setTitleFor(d[BAR_KEY]);
+  setupMenus(d[BAR_KEY]);
+});
+
+if (chrome.contextMenus) {
+  chrome.contextMenus.onClicked.addListener(async (info) => {
+    if (info.menuItemId === "pf-mode-dev") {
+      await chrome.storage.local.remove([BAR_KEY, BAR_SITES_KEY]);
+    } else if (info.menuItemId === "pf-mode-all") {
+      await chrome.storage.local.set({ [BAR_KEY]: true });
+      await chrome.storage.local.remove(BAR_SITES_KEY);
+    } else if (info.menuItemId === "pf-mode-none") {
+      await chrome.storage.local.set({ [BAR_KEY]: false });
+      await chrome.storage.local.remove(BAR_SITES_KEY);
+    }
+    await syncMenusAndTitle();
+  });
+}
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "toggle-point") sendToActiveTab({ type: "YB_TOGGLE_POINT" });

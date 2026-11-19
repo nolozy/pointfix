@@ -54,7 +54,7 @@ After the changes, briefly tell me what you changed.
 | Stop Point mode | `Esc` |
 
 - The bar at the bottom right has the same actions as buttons. Drag its grip (the dots on the left) to move it anywhere; the place is remembered. Double-click the grip to put it back in the bottom-right corner.
-- Click the **Pointfix icon** in the toolbar to show or hide the bar on every page. When the bar is hidden, use the shortcuts.
+- By default, the bar appears automatically on dev and preview sites (`localhost`, `127.0.0.1`, `*.local`, `*.test`, `*.vercel.app`, `*.pages.dev`, `*.netlify.app`, etc.) and stays hidden on regular websites. Click the **Pointfix icon** in the toolbar to show or hide the bar on the current site, or right-click the icon to switch between dev sites only, all sites, or hidden everywhere. Shortcuts still work while the bar is hidden.
 - You can change the shortcuts at `chrome://extensions/shortcuts`.
 
 ## Features

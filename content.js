@@ -467,9 +467,29 @@
     pointBtn.classList.toggle("yb-bar-on", state.point);
   }
 
-  // The bar can be hidden for every page from the toolbar icon. Point mode still
-  // works with Alt+S and Esc while it is hidden.
+  // Bar visibility: shown automatically on dev/preview hosts, hidden on regular
+  // websites unless enabled for that site (toolbar click) or globally (menu).
   const BAR_KEY = "yb_bar_visible";
+  const BAR_SITES_KEY = "yb_bar_sites";
+  const DEV_HOST_RE = /(?:^|\.)(?:localhost|local|test|invalid|example|vercel\.app|pages\.dev|netlify\.app|fly\.dev|railway\.app|onrender\.com|github\.io|ngrok-free\.app|ngrok\.io)$/i;
+  const PRIVATE_IP_RE = /^(?:127(?:\.\d+){3}|10(?:\.\d+){3}|192\.168(?:\.\d+){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d+){2}|0\.0\.0\.0|\[?::1\]?)$/;
+
+  let barGlobalPref;
+  let barSiteMap = null;
+
+  function isDevSite() {
+    if (location.protocol === "file:") return true;
+    const h = location.hostname;
+    return !!h && (DEV_HOST_RE.test(h) || PRIVATE_IP_RE.test(h));
+  }
+
+  function shouldShowBar() {
+    if (barGlobalPref === false) return false;
+    if (barSiteMap && typeof barSiteMap[location.origin] === "boolean") return barSiteMap[location.origin];
+    if (barGlobalPref === true) return true;
+    return isDevSite();
+  }
+
   function applyBarVisible(visible) {
     if (!visible) {
       bar.classList.add("yb-bar-hidden");
@@ -484,6 +504,10 @@
     } else {
       bar.classList.remove("yb-bar-hidden");
     }
+  }
+
+  function syncBarVisible() {
+    applyBarVisible(shouldShowBar());
   }
 
   // ---------- bar position: drag it by the grip, the place is remembered ----------
@@ -1217,7 +1241,11 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     if (changes[STORAGE_KEY]) render();
-    if (changes[BAR_KEY]) applyBarVisible(changes[BAR_KEY].newValue !== false);
+    if (changes[BAR_KEY] || changes[BAR_SITES_KEY]) {
+      if (changes[BAR_KEY]) barGlobalPref = changes[BAR_KEY].newValue;
+      if (changes[BAR_SITES_KEY]) barSiteMap = changes[BAR_SITES_KEY].newValue || null;
+      syncBarVisible();
+    }
     if (changes[BAR_POS_KEY]) {
       savedPos = changes[BAR_POS_KEY].newValue || null;
       applyBarPos(savedPos);
@@ -1255,8 +1283,10 @@
 
   ensureMounted();
   render();
-  chrome.storage.local.get([BAR_KEY, BAR_POS_KEY]).then((d) => {
+  chrome.storage.local.get([BAR_KEY, BAR_SITES_KEY, BAR_POS_KEY]).then((d) => {
+    barGlobalPref = d[BAR_KEY];
+    barSiteMap = d[BAR_SITES_KEY] || null;
     savedPos = d[BAR_POS_KEY] || null;
-    applyBarVisible(d[BAR_KEY] !== false);
+    syncBarVisible();
   });
 })();
