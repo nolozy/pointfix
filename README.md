@@ -69,7 +69,7 @@ After the changes, briefly tell me what you changed.
 - **Parent and child** — while pointing, press `↑` to pick the parent of the highlighted element (for example the whole card instead of one line) and `↓` to go back. Moving the mouse starts again from the element under it.
 - **Source location** — on a dev server, the prompt says which file and line the element comes from (for example `src/App.jsx:24:9` (App)), so the agent goes straight to the code. Works with React 18/19 and Vue; Svelte, Angular (component name only) and react-dev-inspector are read too. Production builds have no source data, so the line is left out there.
 - **Current values** — the size, font, colors, padding, margin, border and radius the element has now, so "bigger" or "rounder" has a starting point.
-- **Short prompt** — the URL, a CSS selector, the source, the tag name, the text, the current values and your instruction. Nothing else.
+- **Short prompt & settings** — includes only the URL, CSS selector, source, tag name, text, current values and your instruction. Right-click the Pointfix icon → **Prompt settings...** (or open extension options) to switch the prompt language (English / Japanese) or append a custom line at the end of every prompt (for example, "Use Tailwind CSS. Do not edit other files.").
 - **Runs locally** — nothing is sent to any server.
 
 ### Motion
@@ -141,6 +141,8 @@ pointfix/
 ├── ui-styles.js      Styles of the in-page UI (applied inside Shadow DOM)
 ├── page-probe.js     Runs in the page to read the component and source location
 ├── content.css       Page-level cursor rule for Point mode
+├── options.html      Prompt settings page (language and extra closing line)
+├── options.js        Logic for the prompt settings page
 ├── icons/            Extension icons (PNG for Chrome, SVG source)
 ├── docs/             Images used in this README
 ├── README.md         English

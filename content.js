@@ -9,6 +9,7 @@
   window.__ybLoaded = true;
 
   const STORAGE_KEY = "yb_annotations";
+  const SETTINGS_KEY = "yb_settings";
 
   const KIND = {
     BUTTON: "button", A: "link", INPUT: "input", TEXTAREA: "text area",
@@ -309,42 +310,79 @@
   // ---------- prompt ----------
 
   // Points can come from several pages; each annotation carries its own URL.
-  function buildPrompt(list) {
+  function buildPrompt(list, settings) {
+    const lang = settings && settings.promptLang === "ja" ? "ja" : "en";
+    const note = settings && typeof settings.promptNote === "string" ? settings.promptNote.trim() : "";
+    const ja = lang === "ja";
     const lines = [];
-    lines.push("Please update the web pages below as described. Change only the annotated elements.");
-    lines.push("After the changes, briefly tell me what you changed.");
-    lines.push("");
-    lines.push("# Annotations");
+    if (ja) {
+      lines.push("以下のWebページを指示どおりに修正してください。注釈を付けた要素だけを変更してください。");
+      lines.push("変更が終わったら、何を変えたか簡潔に教えてください。");
+      lines.push("");
+      lines.push("# 注釈");
+    } else {
+      lines.push("Please update the web pages below as described. Change only the annotated elements.");
+      lines.push("After the changes, briefly tell me what you changed.");
+      lines.push("");
+      lines.push("# Annotations");
+    }
     lines.push("");
     list.forEach((a, i) => {
-      lines.push("## Annotation " + (i + 1));
+      lines.push((ja ? "## 注釈 " : "## Annotation ") + (i + 1));
       lines.push("**URL**: " + a.url);
       if (a.kind === "area") {
         // An area drawn by dragging: where it is, what holds it and what is in it.
-        lines.push("**Area**: " + a.width + "×" + a.height + "px at x " + a.docX + ", y " + a.docY + " on the page");
-        lines.push("**Around**: `" + a.selector + "` (" + a.tagName + ")");
-        if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
-        else if (a.component) lines.push("**Component**: " + a.component);
-        if (a.inside && a.inside.length) {
-          lines.push("**Inside**: " + a.inside.map((x) => "`" + x.selector + "`" + (x.text ? ' "' + x.text + '"' : "")).join("; "));
+        if (ja) {
+          lines.push("**範囲**: " + a.width + "×" + a.height + "px（ページ座標 x " + a.docX + ", y " + a.docY + "）");
+          lines.push("**親要素**: `" + a.selector + "` (" + a.tagName + ")");
+          if (a.source) lines.push("**ソース**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+          else if (a.component) lines.push("**コンポーネント**: " + a.component);
+          if (a.inside && a.inside.length) {
+            lines.push("**範囲内の要素**: " + a.inside.map((x) => "`" + x.selector + "`" + (x.text ? ' "' + x.text + '"' : "")).join("; "));
+          } else {
+            lines.push("**範囲内の要素**: (何もない場所)");
+          }
+          lines.push("**指示**: " + a.instruction);
         } else {
-          lines.push("**Inside**: (empty space)");
+          lines.push("**Area**: " + a.width + "×" + a.height + "px at x " + a.docX + ", y " + a.docY + " on the page");
+          lines.push("**Around**: `" + a.selector + "` (" + a.tagName + ")");
+          if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+          else if (a.component) lines.push("**Component**: " + a.component);
+          if (a.inside && a.inside.length) {
+            lines.push("**Inside**: " + a.inside.map((x) => "`" + x.selector + "`" + (x.text ? ' "' + x.text + '"' : "")).join("; "));
+          } else {
+            lines.push("**Inside**: (empty space)");
+          }
+          lines.push("**Instruction**: " + a.instruction);
         }
-        lines.push("**Instruction**: " + a.instruction);
         lines.push("");
         return;
       }
-      lines.push("**Target**: `" + a.selector + "`");
-      // Where the element comes from in the code, when the dev build tells us.
-      if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
-      else if (a.component) lines.push("**Component**: " + a.component);
-      lines.push("**TagName**: " + a.tagName);
-      if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
-      // The values now, so "bigger" or "rounder" has something to start from.
-      if (a.current) lines.push("**Current**: " + a.current);
-      lines.push("**Instruction**: " + a.instruction);
+      if (ja) {
+        lines.push("**対象**: `" + a.selector + "`");
+        if (a.source) lines.push("**ソース**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+        else if (a.component) lines.push("**コンポーネント**: " + a.component);
+        lines.push("**タグ名**: " + a.tagName);
+        if (a.innerText) lines.push("**テキスト**: " + a.innerText);
+        if (a.current) lines.push("**現在のスタイル**: " + a.current);
+        lines.push("**指示**: " + a.instruction);
+      } else {
+        lines.push("**Target**: `" + a.selector + "`");
+        // Where the element comes from in the code, when the dev build tells us.
+        if (a.source) lines.push("**Source**: `" + a.source + "`" + (a.component ? " (" + a.component + ")" : ""));
+        else if (a.component) lines.push("**Component**: " + a.component);
+        lines.push("**TagName**: " + a.tagName);
+        if (a.innerText) lines.push("**Inner Content**: " + a.innerText);
+        // The values now, so "bigger" or "rounder" has something to start from.
+        if (a.current) lines.push("**Current**: " + a.current);
+        lines.push("**Instruction**: " + a.instruction);
+      }
       lines.push("");
     });
+    if (note) {
+      lines.push(note);
+      lines.push("");
+    }
     return lines.join("\n");
   }
 
@@ -858,10 +896,16 @@
     updateBar();
   }
 
+  async function loadSettings() {
+    const data = await chrome.storage.local.get(SETTINGS_KEY);
+    return (data[SETTINGS_KEY] && typeof data[SETTINGS_KEY] === "object") ? data[SETTINGS_KEY] : {};
+  }
+
   async function copyPrompt() {
-    const site = siteItems(await loadAll());
+    const [all, settings] = await Promise.all([loadAll(), loadSettings()]);
+    const site = siteItems(all);
     if (!site.length) { showToast("No points on this site yet"); return; }
-    const text = buildPrompt(site);
+    const text = buildPrompt(site, settings);
     let ok = false;
     try {
       await navigator.clipboard.writeText(text);

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pointfix — Settings</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #fafafa;
+      color: #09090b;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .wrap {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0 0 4px;
+    }
+    .sub {
+      color: #71717a;
+      font-size: 13px;
+      margin: 0 0 24px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e4e4e7;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    label.title {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .hint {
+      color: #71717a;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .seg {
+      display: inline-flex;
+      background: #f4f4f5;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .seg label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #52525b;
+      cursor: pointer;
+      user-select: none;
+    }
+    .seg input { display: none; }
+    .seg label:has(input:checked) {
+      background: #ffffff;
+      color: #09090b;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+    textarea {
+      width: 100%;
+      min-height: 76px;
+      padding: 10px 12px;
+      border: 1px solid #d4d4d8;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #09090b;
+      font: 13px/1.5 inherit;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: 2px solid #18181b;
+      outline-offset: 1px;
+    }
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button.save {
+      background: #18181b;
+      color: #fafafa;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font: 600 13px/1.4 inherit;
+      cursor: pointer;
+    }
+    button.save:hover { background: #27272a; }
+    .status {
+      font-size: 12px;
+      color: #16a34a;
+      font-weight: 500;
+    }
+    .preview-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #71717a;
+      margin: 0 0 8px;
+    }
+    pre.preview {
+      margin: 0;
+      padding: 12px;
+      background: #f4f4f5;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #18181b;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #09090b; color: #fafafa; }
+      .sub, .hint, .preview-label { color: #a1a1aa; }
+      .card { background: #18181b; border-color: #27272a; }
+      .seg { background: #09090b; border-color: #27272a; }
+      .seg label { color: #a1a1aa; }
+      .seg label:has(input:checked) { background: #27272a; color: #fafafa; }
+      textarea { background: #09090b; border-color: #3f3f46; color: #fafafa; }
+      textarea:focus { outline-color: #fafafa; }
+      button.save { background: #fafafa; color: #09090b; }
+      button.save:hover { background: #e4e4e7; }
+      pre.preview { background: #09090b; border-color: #27272a; color: #e4e4e7; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Pointfix Settings</h1>
+    <p class="sub">Customize the prompt copied to your clipboard.</p>
+
+    <div class="card">
+      <div class="field">
+        <label class="title">Prompt language</label>
+        <div class="seg" role="radiogroup" aria-label="Prompt language">
+          <label><input type="radio" name="promptLang" value="en" checked>English</label>
+          <label><input type="radio" name="promptLang" value="ja">日本語</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="title" for="promptNote">Extra line at the end</label>
+        <textarea id="promptNote" placeholder="e.g. Use Tailwind CSS. Do not edit other files."></textarea>
+        <div class="hint">Optional. Added at the bottom of every copied prompt.</div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="save" id="saveBtn">Save</button>
+        <span class="status" id="status" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="preview-label">Preview</div>
+      <pre class="preview" id="preview"></pre>
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

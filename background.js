@@ -105,6 +105,8 @@ function setupMenus(globalPref) {
     chrome.contextMenus.create({ id: "pf-mode-dev", title: "Show on dev sites only (default)", type: "radio", checked: mode === "dev", contexts: ["action"] });
     chrome.contextMenus.create({ id: "pf-mode-all", title: "Show on all sites", type: "radio", checked: mode === "all", contexts: ["action"] });
     chrome.contextMenus.create({ id: "pf-mode-none", title: "Hide on all sites", type: "radio", checked: mode === "none", contexts: ["action"] });
+    chrome.contextMenus.create({ id: "pf-sep", type: "separator", contexts: ["action"] });
+    chrome.contextMenus.create({ id: "pf-options", title: "Prompt settings...", contexts: ["action"] });
   });
 }
 
@@ -159,6 +161,10 @@ chrome.storage.local.get(BAR_KEY).then((d) => {
 
 if (chrome.contextMenus) {
   chrome.contextMenus.onClicked.addListener(async (info) => {
+    if (info.menuItemId === "pf-options") {
+      chrome.runtime.openOptionsPage();
+      return;
+    }
     if (info.menuItemId === "pf-mode-dev") {
       await chrome.storage.local.remove([BAR_KEY, BAR_SITES_KEY]);
     } else if (info.menuItemId === "pf-mode-all") {
