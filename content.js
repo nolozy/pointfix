@@ -424,8 +424,9 @@
     return b;
   }
 
-  // Small bar at the bottom right with the three actions.
-  const bar = makeEl("div", "yb-bar");
+  // Small bar at the bottom right with the actions. Starts hidden until
+  // storage confirms it should be shown, so hidden bars never flash on load.
+  const bar = makeEl("div", "yb-bar yb-bar-hidden");
   const countEl = makeEl("span", "yb-bar-count", "No points");
   const pointBtn = barButton("Start", "Alt+S", "yb-bar-primary");
   const copyBtn = barButton("Copy prompt", "Alt+C");
@@ -452,7 +453,19 @@
   // works with Alt+S and Esc while it is hidden.
   const BAR_KEY = "yb_bar_visible";
   function applyBarVisible(visible) {
-    bar.classList.toggle("yb-bar-hidden", !visible);
+    if (!visible) {
+      bar.classList.add("yb-bar-hidden");
+      return;
+    }
+    if (savedPos) {
+      // Measure and place before painting so the bar does not flash at the default corner.
+      bar.style.visibility = "hidden";
+      bar.classList.remove("yb-bar-hidden");
+      applyBarPos(savedPos);
+      bar.style.visibility = "";
+    } else {
+      bar.classList.remove("yb-bar-hidden");
+    }
   }
 
   // ---------- bar position: drag it by the grip, the place is remembered ----------
@@ -1203,8 +1216,7 @@
   ensureMounted();
   render();
   chrome.storage.local.get([BAR_KEY, BAR_POS_KEY]).then((d) => {
-    applyBarVisible(d[BAR_KEY] !== false);
     savedPos = d[BAR_POS_KEY] || null;
-    applyBarPos(savedPos);
+    applyBarVisible(d[BAR_KEY] !== false);
   });
 })();
