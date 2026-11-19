@@ -60,7 +60,7 @@ After the changes, briefly tell me what you changed.
 ## Features
 
 - **Hover to highlight, click to point** — a short label shows what you are pointing at.
-- **Dashed boxes with numbers** — points stay visible on the page where they were made, and the numbers match the prompt.
+- **Dashed boxes with numbers** — points stay visible on the page where they were made and follow their elements across fixed, sticky and scrollable panels; the numbers match the prompt.
 - **Several pages in one prompt** — works on single-page sites too. Each annotation carries its own URL.
 - **Points stay with their site** — the count, Copy prompt and Delete all only use the points of the site you have open, so points from another project never end up in the prompt.
 - **Edit or delete one point** — click its number.

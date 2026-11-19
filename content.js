@@ -657,6 +657,88 @@
   const popIds = new Set();
   let ready = false;
 
+  // Element-anchored boxes currently on screen, kept in sync on scroll/resize.
+  let trackedBoxes = [];
+  let syncRaf = 0;
+
+  // Returns true when el or an ancestor is position: fixed (so its box can also
+  // use position: fixed and stay locked during page scroll with zero lag).
+  function isFixedTree(el) {
+    for (let n = el; n && n.nodeType === 1 && n !== document.documentElement; n = n.parentElement) {
+      if (getComputedStyle(n).position === "fixed") return true;
+    }
+    return false;
+  }
+
+  // Returns true when el is completely clipped out of view by a scrollable/clipping ancestor.
+  function isClippedOut(el, r) {
+    if (r.width <= 0 && r.height <= 0) return true;
+    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      const ov = cs.overflow + " " + cs.overflowX + " " + cs.overflowY;
+      if (!/(auto|scroll|hidden|clip)/.test(ov)) continue;
+      const pr = p.getBoundingClientRect();
+      if (r.bottom <= pr.top || r.top >= pr.bottom || r.right <= pr.left || r.left >= pr.right) return true;
+    }
+    return false;
+  }
+
+  function applyBoxGeom(entry, x, y, w, h, fixed, hidden) {
+    const s = entry.box.style;
+    if (entry.fixed !== fixed) {
+      s.position = fixed ? "fixed" : "absolute";
+      entry.fixed = fixed;
+    }
+    if (entry.hidden !== hidden) {
+      s.visibility = hidden ? "hidden" : "";
+      entry.hidden = hidden;
+    }
+    if (entry.x !== x) { s.left = x + "px"; entry.x = x; }
+    if (entry.y !== y) { s.top = y + "px"; entry.y = y; }
+    if (entry.w !== w) { s.width = w + "px"; entry.w = w; }
+    if (entry.h !== h) { s.height = h + "px"; entry.h = h; }
+  }
+
+  function syncBoxEntry(entry) {
+    let el = entry.el;
+    if ((!el || !el.isConnected) && entry.selector) {
+      try { el = document.querySelector(entry.selector); } catch (e) { el = null; }
+      entry.el = el;
+    }
+    if (!el) {
+      const f = entry.fallback;
+      applyBoxGeom(entry, f.x, f.y, f.w, f.h, false, false);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    const fixed = isFixedTree(el);
+    const hidden = isClippedOut(el, r);
+    const x = Math.round(fixed ? r.left : r.left + window.scrollX);
+    const y = Math.round(fixed ? r.top : r.top + window.scrollY);
+    applyBoxGeom(entry, x, y, Math.round(r.width), Math.round(r.height), fixed, hidden);
+  }
+
+  function syncAll() {
+    syncRaf = 0;
+    for (const entry of trackedBoxes) syncBoxEntry(entry);
+    if (state.point && !state.editing && pickEl && pickEl.isConnected && overlay.classList.contains("yb-on")) {
+      const r = pickEl.getBoundingClientRect();
+      overlay.style.transform = "translate(" + r.left + "px, " + r.top + "px)";
+      overlay.style.width = r.width + "px";
+      overlay.style.height = r.height + "px";
+    }
+  }
+
+  function scheduleSync() {
+    if (syncRaf) return;
+    if (!trackedBoxes.length && !(state.point && !state.editing && pickEl)) return;
+    syncRaf = requestAnimationFrame(syncAll);
+  }
+
+  const boxResizeObserver = typeof ResizeObserver === "function"
+    ? new ResizeObserver(() => scheduleSync())
+    : null;
+
   // Draws the boxes that belong to the current page. Numbers follow the global
   // order, so they match the numbers in the prompt.
   async function render() {
@@ -666,27 +748,29 @@
     const currentKey = pageKey();
     pageCount = site.length;
     boxLayer.textContent = "";
+    trackedBoxes = [];
+    if (boxResizeObserver) boxResizeObserver.disconnect();
     site.forEach((a, i) => {
       if (a.pageKey !== currentKey) return;
-      let x = a.docX, y = a.docY, w = a.width, h = a.height;
-      // An area stays where it was drawn; an element point follows its element.
-      if (a.selector && a.kind !== "area") {
-        try {
-          const el = document.querySelector(a.selector);
-          if (el) {
-            const r = el.getBoundingClientRect();
-            x = Math.round(r.left + window.scrollX);
-            y = Math.round(r.top + window.scrollY);
-            w = Math.round(r.width);
-            h = Math.round(r.height);
-          }
-        } catch (e) { /* keep stored position */ }
-      }
       const box = makeEl("div", a.kind === "area" ? "yb-box yb-box-area" : "yb-box");
-      box.style.left = x + "px";
-      box.style.top = y + "px";
-      box.style.width = w + "px";
-      box.style.height = h + "px";
+      if (a.selector && a.kind !== "area") {
+        let el = null;
+        try { el = document.querySelector(a.selector); } catch (e) { el = null; }
+        const entry = {
+          box, selector: a.selector, el,
+          fallback: { x: a.docX, y: a.docY, w: a.width, h: a.height },
+          x: null, y: null, w: null, h: null, fixed: null, hidden: null
+        };
+        syncBoxEntry(entry);
+        trackedBoxes.push(entry);
+        if (boxResizeObserver && el) boxResizeObserver.observe(el);
+      } else {
+        // An area stays where it was drawn.
+        box.style.left = a.docX + "px";
+        box.style.top = a.docY + "px";
+        box.style.width = a.width + "px";
+        box.style.height = a.height + "px";
+      }
       // The number opens this point for editing or deleting.
       const num = makeEl("div", "yb-box-num", String(i + 1));
       num.title = "Edit or delete this point";
@@ -713,6 +797,9 @@
       if (popIds.has(key)) box.classList.add("yb-box-in");
       boxLayer.appendChild(box);
     });
+    if (boxResizeObserver && trackedBoxes.length && document.body) {
+      boxResizeObserver.observe(document.body);
+    }
     ready = true;
     updateBar();
   }
@@ -1064,11 +1151,14 @@
     }
   }, true);
 
+  // Follow scrolls (including inside overflow containers via capture) and window resizes.
+  window.addEventListener("scroll", scheduleSync, { capture: true, passive: true });
   let resizeTimer = null;
   window.addEventListener("resize", () => {
+    scheduleSync();
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(render, 200);
-  });
+  }, { passive: true });
 
   // ---------- messages from the background (toolbar icon and shortcuts) ----------
 
