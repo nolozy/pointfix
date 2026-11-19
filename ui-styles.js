@@ -27,15 +27,19 @@ button {
   -webkit-appearance: none;
 }
 
-/* Hover frame: moves with transform and eases between elements. */
+/* Hover frame: monochrome with dual-contrast border so it stays crisp on both dark and light pages. */
 .yb-overlay {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 2147483001;
   pointer-events: none;
-  border: 2px solid #6366f1;
-  background: rgba(99, 102, 241, 0.12);
+  border: 2px solid #fafafa;
+  background: rgba(161, 161, 170, 0.14);
+  box-shadow:
+    0 0 0 1.5px rgba(9, 9, 11, 0.88),
+    inset 0 0 0 1px rgba(9, 9, 11, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.28);
   border-radius: 6px;
   box-sizing: border-box;
   opacity: 0;
@@ -52,14 +56,16 @@ button {
 .yb-overlay-label {
   position: absolute;
   left: -2px;
-  top: -30px;
+  top: -32px;
   max-width: 420px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: #4f46e5;
-  color: #fff;
-  font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
+  background: rgba(24, 24, 27, 0.96);
+  color: #fafafa;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+  font: 500 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   padding: 4px 8px;
   border-radius: 6px;
 }
@@ -93,8 +99,9 @@ button {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 2px solid #6366f1;
-  background: rgba(99, 102, 241, 0.18);
+  border: 2px solid #fafafa;
+  background: rgba(250, 250, 250, 0.14);
+  box-shadow: 0 0 0 1.5px rgba(9, 9, 11, 0.8);
   pointer-events: none;
   z-index: 2147483002;
   transform: translate(-50%, -50%) scale(0.2);
@@ -106,7 +113,7 @@ button {
   to   { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
 }
 
-/* Saved points: a dashed box around the element, with its number. */
+/* Saved points: a monochrome dashed box with dark outer ring for visibility on any background. */
 .yb-boxes {
   position: absolute;
   left: 0;
@@ -120,9 +127,11 @@ button {
 .yb-box {
   position: absolute;
   box-sizing: border-box;
-  border: 2px dashed #6366f1;
+  border: 2px dashed #fafafa;
+  outline: 1.5px solid rgba(9, 9, 11, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(9, 9, 11, 0.45);
   border-radius: 6px;
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(161, 161, 170, 0.1);
   pointer-events: none;
 }
 
@@ -133,11 +142,13 @@ button {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #f59e0b;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  color: #1f2937;
-  font: bold 13px/20px -apple-system, "Segoe UI", sans-serif;
+  background: #fafafa;
+  border: 2px solid #09090b;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.85),
+    0 2px 8px rgba(0, 0, 0, 0.45);
+  color: #09090b;
+  font: 700 12.5px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
   /* The box ignores the mouse, but its number can be clicked to edit the point. */
   pointer-events: auto;
@@ -466,7 +477,7 @@ button {
   }
 }
 
-/* Area: the rectangle while dragging, and saved areas (pink, to tell them from element points). */
+/* Area: the rectangle while dragging, and saved areas (monochrome with dual-contrast border). */
 .yb-area-draft {
   position: fixed;
   left: 0;
@@ -474,26 +485,30 @@ button {
   z-index: 2147483001;
   pointer-events: none;
   box-sizing: border-box;
-  border: 2px dashed #ec4899;
-  background: rgba(236, 72, 153, 0.08);
+  border: 2px dashed #fafafa;
+  outline: 1.5px solid rgba(9, 9, 11, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(9, 9, 11, 0.45);
+  background: rgba(161, 161, 170, 0.14);
   border-radius: 6px;
 }
 
 .yb-area-size {
   position: absolute;
   left: -2px;
-  top: -28px;
-  background: #db2777;
-  color: #fff;
-  font: 12px/1.4 -apple-system, "Segoe UI", sans-serif;
+  top: -30px;
+  background: rgba(24, 24, 27, 0.96);
+  color: #fafafa;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+  font: 500 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   padding: 3px 8px;
   border-radius: 6px;
   white-space: nowrap;
 }
 
 .yb-box-area {
-  border-color: #ec4899;
-  background: rgba(236, 72, 153, 0.06);
+  border-color: #e4e4e7;
+  background: rgba(161, 161, 170, 0.1);
 }
 
 /* Screenshot: hide our controls, show each instruction next to its box. */
@@ -506,11 +521,11 @@ button {
   width: max-content;
   padding: 5px 9px;
   border-radius: 7px;
-  background: #111827;
-  border: 1px solid #f59e0b;
-  color: #fff;
-  font: 600 13px/1.4 -apple-system, "Segoe UI", sans-serif;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  background: rgba(24, 24, 27, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #fafafa;
+  font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42);
   white-space: normal;
 }
 

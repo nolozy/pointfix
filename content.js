@@ -419,7 +419,7 @@
   cursorEl.innerHTML =
     '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">' +
     '<path d="M4 2 L4 19 L8.6 14.8 L11.4 21.6 L14.2 20.4 L11.4 13.6 L17.6 13.6 Z" ' +
-    'fill="#6366f1" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    'fill="#fafafa" stroke="#09090b" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 
   // Lagging position: the arrow eases toward the mouse, one frame at a time.
   const cur = { x: -100, y: -100, tx: -100, ty: -100, raf: 0 };
