@@ -1195,22 +1195,31 @@
   // ---------- page changes inside the site (SPA navigation) ----------
 
   // Single-page sites change the URL without a page load, so re-draw the boxes
-  // whenever the URL changes. Checking the URL is cheap, so a short interval is fine.
+  // whenever the URL changes. Prefer the Navigation API so no polling timer runs
+  // while idle, falling back to a 400ms check only when Navigation API is absent.
   let lastKey = pageKey();
+  let settleTimer = null;
   function checkLocation() {
     const k = pageKey();
     if (k === lastKey) return;
     lastKey = k;
     render();
     // The new page may still be drawing; draw again once it has settled.
-    setTimeout(render, 800);
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(render, 800);
   }
   window.addEventListener("popstate", checkLocation);
   window.addEventListener("hashchange", checkLocation);
-  const locationTimer = setInterval(() => {
-    if (!alive()) { clearInterval(locationTimer); return; }
-    checkLocation();
-  }, 400);
+  if (typeof window.navigation === "object" && window.navigation && typeof window.navigation.addEventListener === "function") {
+    window.navigation.addEventListener("navigate", () => setTimeout(checkLocation, 0));
+    window.navigation.addEventListener("currententrychange", checkLocation);
+    window.navigation.addEventListener("navigatesuccess", checkLocation);
+  } else {
+    const locationTimer = setInterval(() => {
+      if (!alive()) { clearInterval(locationTimer); return; }
+      checkLocation();
+    }, 400);
+  }
 
   ensureMounted();
   render();
